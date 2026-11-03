@@ -24,6 +24,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+load_dotenv(BASE_DIR / '.env') 
+
 SECRET_KEY = os.getenv('SECRET_KEY' , '')
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -31,6 +33,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+AUTH_USER_MODEL = 'user.User'
 
 # Application definition
 
@@ -41,6 +44,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'rest_framework',
+    'drf_spectacular',
+    'dotenv',
 
 
     'user',
@@ -144,4 +151,18 @@ MAILERS = {
     'default': {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
+}
+
+
+REST_FRAMEWORK= {
+    'DEFAULT_AUTHENTICATION_CLASSES': (  
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # 'DEFAULT_FILTER_BACKENDS': [
+    #     'django_filters.rest_framework.DjangoFilterBackend',
+    #     # 'rest_framework.filters.SearchFilter',
+    #     # 'rest_framework.filters.OrderingFilter',
+    # ],
 }
