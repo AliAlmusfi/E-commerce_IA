@@ -56,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'E_commerce.urls'
+ROOT_URLCONF = 'e_commerce.urls'
 
 TEMPLATES = [
     {
@@ -73,11 +73,13 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'E_commerce.wsgi.application'
+WSGI_APPLICATION = 'e_commerce.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+
+load_dotenv(BASE_DIR / '.env') 
 
 DATABASES = {
     # 'default': {
