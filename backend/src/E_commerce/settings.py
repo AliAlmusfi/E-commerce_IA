@@ -51,7 +51,7 @@ INSTALLED_APPS = [
 
 
     'user',
-    'order',
+    # 'order',
     'notifications',
 ]
 
