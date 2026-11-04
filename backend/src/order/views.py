@@ -88,7 +88,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             {"detail": "Orders cannot be edited. Cancel and create a new one."},
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
-    
+
     def partial_update(self, request, *args, **kwargs):
         return Response(
             {"detail": "Orders cannot be edited. Use PATCH /orders/{id}/status/ "
@@ -125,3 +125,5 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(OrderSerializer(order, context=self.get_serializer_context()).data)
+
+    

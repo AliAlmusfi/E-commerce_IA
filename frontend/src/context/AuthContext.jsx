@@ -1,13 +1,37 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import api from '../api/axios'
+import {
+  loginUser,
+  registerUser,
+  refreshTokenRequest,
+  fetchCurrentUser
+} from '../features/auth/services/authService'
+import { decodeJWT } from '../utils/jwt'
 
 const AuthContext = createContext(null)
+
+function extractUserFromToken(access) {
+  const payload = decodeJWT(access)
+  if (!payload) return null
+  return {
+    id: payload.user_id || payload.sub || payload.id,
+    username: payload.username,
+    email: payload.email,
+    role: payload.role || (payload.is_superuser ? 'admin' : 'customer'),
+    is_staff: !!payload.is_staff,
+    is_superuser: !!payload.is_superuser
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
   })
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null)
+  const [accessToken, setAccessToken] = useState(
+    () => localStorage.getItem('access_token') || null
+  )
+  const [refreshTokenValue, setRefreshTokenValue] = useState(
+    () => localStorage.getItem('refresh_token') || null
+  )
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -16,52 +40,86 @@ export function AuthProvider({ children }) {
   }, [user])
 
   useEffect(() => {
-    if (token) localStorage.setItem('token', token)
-    else localStorage.removeItem('token')
-  }, [token])
+    if (accessToken) localStorage.setItem('access_token', accessToken)
+    else localStorage.removeItem('access_token')
+  }, [accessToken])
+
+  useEffect(() => { 
+    if (refreshTokenValue) localStorage.setItem('refresh_token', refreshTokenValue)
+    else localStorage.removeItem('refresh_token')
+  }, [refreshTokenValue])
+
+  const hydrateUser = async (access, refresh) => {
+    setAccessToken(access)
+    setRefreshTokenValue(refresh)
+
+    try {
+      const me = await fetchCurrentUser()
+      setUser(me)
+      return me
+    } catch {
+      const fromToken = extractUserFromToken(access)
+      setUser(fromToken)
+      return fromToken
+    }
+  }
 
   const login = async (email, password) => {
     setLoading(true)
     try {
-      const { data } = await api.post('/auth/login/', { email, password })
-      setUser(data.user)
-      setToken(data.token)
-      return data
+      const { access, refresh } = await loginUser({ email, password })
+      const me = await hydrateUser(access, refresh)
+      return { user: me, access }
     } finally {
       setLoading(false)
     }
   }
 
-  // دالة إنشاء حساب جديد
-  const register = async (name, email, password) => {
+  const register = async (username, email, password) => {
     setLoading(true)
     try {
-      const { data } = await api.post('/auth/register/', { name, email, password })
-      // تسجيل الدخول تلقائياً بعد إنشاء الحساب
-      setUser(data.user)
-      setToken(data.token)
-      return data
+      await registerUser({ username, email, password })
+      const { access, refresh } = await loginUser({ email, password })
+      const me = await hydrateUser(access, refresh)
+      return { user: me, access }
     } finally {
       setLoading(false)
     }
+  }
+
+  const refreshAccessToken = async () => {
+    if (!refreshTokenValue) throw new Error('No refresh token')
+    const { access } = await refreshTokenRequest(refreshTokenValue)
+    setAccessToken(access)
+    return access
   }
 
   const logout = () => {
     setUser(null)
-    setToken(null)
+    setAccessToken(null)
+    setRefreshTokenValue(null)
   }
 
+  const isAdmin =
+    user?.role === 'admin' ||
+    user?.is_superuser === true ||
+    user?.is_staff === true
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      loading,
-      login, 
-      register,
-      logout, 
-      isAuthenticated: !!token,
-      isAdmin: user?.role === 'admin' 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token: accessToken,
+        refreshToken: refreshTokenValue,
+        loading,
+        login,
+        register,
+        logout,
+        refreshAccessToken,
+        isAuthenticated: !!accessToken,
+        isAdmin
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

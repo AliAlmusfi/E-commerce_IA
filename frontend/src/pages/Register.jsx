@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import Alert from '../components/feedback/Alert'
 
 export default function Register() {
-  const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -14,21 +14,25 @@ export default function Register() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/home', { replace: true })
-    }
+    if (isAuthenticated) navigate('/home', { replace: true })
   }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (password !== confirmPassword) {
-      return setError('Passwords do not match')
-    }
+    if (password !== confirmPassword) return setError('Passwords do not match')
+    if (password.length < 8) return setError('Password must be at least 8 characters')
+
     try {
-      await register(name, email, password)
+      await register(username, email, password)
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Registration failed. Email might already be in use.')
+      const detail = err?.response?.data
+      if (detail && typeof detail === 'object') {
+        const first = Object.values(detail)[0]
+        setError(Array.isArray(first) ? first[0] : first)
+      } else {
+        setError('Registration failed. Please try again.')
+      }
     }
   }
 
@@ -49,10 +53,7 @@ export default function Register() {
       }}>
         <div style={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
+          top: 0, left: 0, width: '100%', height: '100%',
           background: 'linear-gradient(135deg, #325662 30%, #4a7a8c 100%)',
           clipPath: 'polygon(0 0, 100% 0, 100% 55%, 0 90%)',
           zIndex: 0
@@ -71,7 +72,6 @@ export default function Register() {
         }}>
           <div style={{ textAlign: 'center', marginBottom: '35px' }}>
             <h1 style={{ color: '#325662', fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>Create Account</h1>
-            {/* <p style={{ color: '#888', fontSize: '15px' }}>Join us to start shopping</p> */}
           </div>
 
           <Alert message={error} />
@@ -82,8 +82,8 @@ export default function Register() {
               <input
                 type="text"
                 placeholder="John Doe"
-                value={name}
-                onChange={e => setName(e.target.value)}
+                value={username}
+                onChange={e => setUsername(e.target.value)}
                 required
                 style={{
                   width: '100%',
@@ -129,6 +129,7 @@ export default function Register() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                minLength={8}
                 style={{
                   width: '100%',
                   padding: '14px 16px',
@@ -189,7 +190,9 @@ export default function Register() {
             </button>
 
             <div style={{ marginTop: '30px', textAlign: 'center' }}>
-              <p style={{ color: '#666', fontSize: '14px' }}>Already have an account? <Link to="/" style={{ color: '#f7c17b', fontWeight: 'bold', textDecoration: 'none' }}>Sign in here</Link></p>
+              <p style={{ color: '#666', fontSize: '14px' }}>
+                Already have an account? <Link to="/" style={{ color: '#f7c17b', fontWeight: 'bold', textDecoration: 'none' }}>Sign in here</Link>
+              </p>
             </div>
           </form>
         </div>

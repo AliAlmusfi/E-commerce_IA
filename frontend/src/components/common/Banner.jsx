@@ -11,7 +11,7 @@ export default function Banner({
   const prev = () => setActive(a => (a + 2) % 3)
 
   return (
-    <div className="banner_section layout_padding">
+    <div className="banner_section layout_padding " >
       <div id="main_slider" className="carousel slide">
         <div className="carousel-inner">
           {[0, 1, 2].map(i => (
