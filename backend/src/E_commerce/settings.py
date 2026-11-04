@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
 
     'user',
+    'order',
 ]
 
 MIDDLEWARE = [
@@ -166,3 +167,7 @@ REST_FRAMEWORK= {
     #     # 'rest_framework.filters.OrderingFilter',
     # ],
 }
+
+
+PRODUCT_SERVICE_GRPC_HOST = os.getenv("PRODUCT_SERVICE_GRPC_HOST", "localhost:50052")
+INVENTORY_GRPC_HOST = os.getenv("INVENTORY_GRPC_HOST", "localhost:50052")

@@ -39,6 +39,7 @@ api_patterns = [
         ))(TokenObtainPairView.as_view()) , name='token_obtain_pair'),
     path('users/token/refresh/' , extend_schema_view(post=extend_schema(tags=['Users/Auth'], summary="Refresh Token"))(TokenRefreshView.as_view()) , name='token_refresh'),
     path('' , include('user.urls') ),
+    path('' , include('order.urls') ),
     
 ]
 
