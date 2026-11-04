@@ -59,7 +59,6 @@ INSTALLED_APPS = [
     'corsheaders',
 
 
-    'notifications',
     'user',
     'order',
     'notifications',
