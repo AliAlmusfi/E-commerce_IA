@@ -1,0 +1,45 @@
+# Use an official Python runtime as a base image
+FROM python:3.13-slim AS base_image
+
+# Set environment variables to keep Python from writing .pyc files and to ensure output is sent straight to logs
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN mkdir /app
+
+# Set the working directory in the container
+WORKDIR /app
+
+# System deps: mysqlclient needs dev headers, grpcio/firebase need a compiler
+RUN apt-get update && apt-get install -y \
+    gcc \
+    python3-dev \
+    pkg-config \
+    default-libmysqlclient-dev \
+    && rm -rf /var/lib/apt/lists/**
+
+# Install system dependencies (if your app needs them, e.g., for MySQL client libraries)
+# RUN apt-get update && apt-get install -y default-libmysqlclient-dev gcc
+
+# Copy the requirements file and install Python dependencies
+COPY ../requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Copy the rest of your application code into the container
+COPY . /app/
+
+# Run migrations + collectstatic in an entrypoint, so they run every start
+
+RUN pip install supervisor
+COPY ./docker/supervisord.conf /app/supervisord.conf
+CMD ["supervisord", "-c", "/app/supervisord.conf"]
+
+COPY ./docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# django http port
+EXPOSE 8000
+# gRPC server port
+EXPOSE 50052 
+ENTRYPOINT ["/app/entrypoint.sh"]
