@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'corsheaders',
 
 
+    'notifications',
     'user',
     'order',
     'notifications',
@@ -179,6 +180,7 @@ REST_FRAMEWORK= {
     # ],
 }
 
+
 #firebase notification
 # Firebase settings
 FIREBASE_CONFIG = {
@@ -198,3 +200,7 @@ FIREBASE_POST_REQUEST_URL = os.getenv('FIREBASE_POST_REQUEST_URL')
 #     "127.0.0.1",
 #     # ...
 # ]
+
+PRODUCT_SERVICE_GRPC_HOST = os.getenv('PRODUCT_SERVICE_GRPC_HOST' , '')
+INVENTORY_GRPC_HOST = os.getenv('INVENTORY_GRPC_HOST' , '')
+
