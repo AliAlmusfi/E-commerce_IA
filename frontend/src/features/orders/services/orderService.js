@@ -1,18 +1,29 @@
 import api from '../../../api/axios'
 
-export const createOrder = async (payload) => {
+export const createOrder = async (items) => {
+  const payload = {
+    items: items.map(i => ({
+      product_id: i.id,
+      quantity: i.qty
+    }))
+  }
   const { data } = await api.post('/orders/', payload)
   return data
 }
 
 export const fetchMyOrders = async () => {
-  const { data } = await api.get('/orders/mine/')
+  const { data } = await api.get('/orders/')
+  return Array.isArray(data) ? data : (data.results || [])
+}
+
+export const fetchOrderDetail = async (orderId) => {
+  const { data } = await api.get(`/orders/${orderId}/`)
   return data
 }
 
 export const fetchAllOrders = async (params = {}) => {
   const { data } = await api.get('/orders/', { params })
-  return data
+  return Array.isArray(data) ? data : (data.results || [])
 }
 
 export const updateOrderStatus = async (orderId, status) => {
@@ -20,17 +31,10 @@ export const updateOrderStatus = async (orderId, status) => {
   return data
 }
 
-export const cancelOrder = async (orderId) => {
-  const { data } = await api.post(`/orders/${orderId}/cancel/`)
-  return data
+export const deleteOrder = async (orderId) => {
+  await api.delete(`/orders/${orderId}/`)
 }
 
-export const confirmOrderPayment = async (orderId, otp) => {
-  const { data } = await api.post(`/orders/${orderId}/confirm-payment/`, { otp })
-  return data
-}
-
-// Parse gRPC error to user-facing message
 export const parseOrderError = (err) => {
   if (err.code === 'ECONNABORTED') {
     return {
@@ -51,13 +55,13 @@ export const parseOrderError = (err) => {
   }
 
   const { status, data } = err.response
-  const detail = data?.message || data?.detail || data?.error
+  const detail = data?.message || data?.detail || data?.error || data?.non_field_errors?.[0]
 
   if (status === 409) {
     return {
       type: 'out_of_stock',
       title: 'Out of Stock',
-      message: detail || 'One or more items in your cart were just purchased by another user. Please review your cart.',
+      message: detail || 'One or more items in your cart were just purchased by another user.',
       details: data?.unavailable_items || data?.details || [],
       retryable: false
     }

@@ -22,6 +22,10 @@ function extractUserFromToken(access) {
   }
 }
 
+function isTruthy(v) {
+  return v === true || v === 'true' || v === 1 || v === '1'
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
@@ -44,20 +48,45 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem('access_token')
   }, [accessToken])
 
-  useEffect(() => { 
+  useEffect(() => {
     if (refreshTokenValue) localStorage.setItem('refresh_token', refreshTokenValue)
     else localStorage.removeItem('refresh_token')
   }, [refreshTokenValue])
 
+  // عند تحميل الصفحة: إذا كان هناك توكن، حدّث بيانات المستخدم من /users/me/
+  useEffect(() => {
+    const token = localStorage.getItem('access_token')
+    if (!token) return
+
+    let cancelled = false
+    fetchCurrentUser()
+      .then((me) => {
+        if (!cancelled) setUser(me)
+      })
+      .catch((err) => {
+        console.warn('[Auth] Could not refresh user on mount:', err?.response?.status)
+      })
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const hydrateUser = async (access, refresh) => {
+    // ⚠️ اكتب في localStorage قبل استدعاء /users/me/
+    // لأن الـ axios interceptor يقرأ التوكن من localStorage مباشرة
+    localStorage.setItem('access_token', access)
+    localStorage.setItem('refresh_token', refresh)
+
     setAccessToken(access)
     setRefreshTokenValue(refresh)
 
     try {
       const me = await fetchCurrentUser()
+      console.log('[Auth] /users/me/ →', me)
       setUser(me)
       return me
-    } catch {
+    } catch (err) {
+      console.warn('[Auth] /users/me/ failed:', err?.response?.status, '→ falling back to JWT')
       const fromToken = extractUserFromToken(access)
       setUser(fromToken)
       return fromToken
@@ -90,6 +119,7 @@ export function AuthProvider({ children }) {
   const refreshAccessToken = async () => {
     if (!refreshTokenValue) throw new Error('No refresh token')
     const { access } = await refreshTokenRequest(refreshTokenValue)
+    localStorage.setItem('access_token', access)
     setAccessToken(access)
     return access
   }
@@ -102,8 +132,8 @@ export function AuthProvider({ children }) {
 
   const isAdmin =
     user?.role === 'admin' ||
-    user?.is_superuser === true ||
-    user?.is_staff === true
+    isTruthy(user?.is_superuser) ||
+    isTruthy(user?.is_staff)
 
   return (
     <AuthContext.Provider
