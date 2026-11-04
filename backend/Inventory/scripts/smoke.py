@@ -3,8 +3,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "proto", "gener
 
 import grpc
 
-import proto.generated.inventory_pb2 as pb
-import proto.generated.inventory_pb2_grpc as pb_grpc
+import inventory_pb2 as pb
+import inventory_pb2_grpc as pb_grpc
 
 with grpc.insecure_channel("localhost:50051") as ch:
     stub = pb_grpc.InventoryServiceStub(ch)

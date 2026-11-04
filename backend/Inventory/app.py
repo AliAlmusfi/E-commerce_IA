@@ -12,7 +12,9 @@ import proto.generated.inventory_pb2_grpc as inventory_pb2_grpc
 
 from db import db_session, init_db
 from config import Config
-from products.controllers import get_product_by_id, get_product_quantity, reserve_product
+from products.controllers import get_product_by_id, \
+        get_product_quantity, reserve_product, \
+        reserve_order, add_product_quantity
 
 from flask_migrate import Migrate
 # Import your custom engine, Base, and a compatibility wrapper
@@ -49,6 +51,18 @@ class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
         try:
             data:dict = reserve_product(request=request, context=context) #controller method that do reservation and gets the data dict
             return inventory_pb2.ReserveProductResponse(**data)
+        finally:
+            db_session.remove()
+    def ReserveOrder(self, request, context):
+        try:
+            data:dict = reserve_order(request=request, context=context)
+            return inventory_pb2.ReserveOrderResponse(**data)
+        finally:
+            db_session.remove()
+    def addProductQuantity(self, request, context):
+        try:
+            data:dict = add_product_quantity(request=request, context=context)
+            return inventory_pb2.ReserveOrderResponse(**data)
         finally:
             db_session.remove()
     
