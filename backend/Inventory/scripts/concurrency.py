@@ -4,8 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import grpc
 
-import proto.generated.inventory_pb2 as pb
-import proto.generated.inventory_pb2_grpc as pb_grpc
+import inventory_pb2 as pb
+import inventory_pb2_grpc as pb_grpc
 
 PRODUCT_ID = 1
 STARTING_STOCK = 10

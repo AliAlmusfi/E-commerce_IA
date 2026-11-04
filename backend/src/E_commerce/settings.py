@@ -31,7 +31,15 @@ SECRET_KEY = os.getenv('SECRET_KEY' , '')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", # REACT + VITE
+]
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
 
 AUTH_USER_MODEL = 'user.User'
 
@@ -48,10 +56,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'dotenv',
+    'corsheaders',
 
 
     'user',
-    'order',
 ]
 
 MIDDLEWARE = [
@@ -167,7 +175,3 @@ REST_FRAMEWORK= {
     #     # 'rest_framework.filters.OrderingFilter',
     # ],
 }
-
-
-PRODUCT_SERVICE_GRPC_HOST = os.getenv("PRODUCT_SERVICE_GRPC_HOST", "localhost:50052")
-INVENTORY_GRPC_HOST = os.getenv("INVENTORY_GRPC_HOST", "localhost:50052")
