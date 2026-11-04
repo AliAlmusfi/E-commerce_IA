@@ -5,6 +5,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 # from rest_framework.filters import OrderingFilter, SearchFilter
 # from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
+
 
 from drf_spectacular.utils import extend_schema
 
@@ -33,6 +35,12 @@ class OrderViewSet(viewsets.ModelViewSet):
     # ordering_fields   = ["created_at", "total", "status"]
     # ordering          = ["-created_at"]
     # search_fields     = ["id", "items__product_title"]
+
+    def get_permissions(self):
+        if self.action == 'list_all' or self.action == 'retrieve_one':
+            self.permission_classes.append(IsAdminUser)
+
+        return super().get_permissions()
 
     def get_queryset(self):
         user = self.request.user
@@ -97,18 +105,25 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
 
     # ─── destroy — cancel, don't delete ────────────────────────
+    @extend_schema(exclude=True)
+
     def destroy(self, request, *args, **kwargs):
-        order = self.get_object()
+        # order = self.get_object()
 
-        if order.status not in (Order.Status.PENDING, Order.Status.PAID):
-            return Response(
-                {"detail": f"Cannot cancel an order in status '{order.status}'."},
-                status=status.HTTP_409_CONFLICT,
-            )
+        # if order.status not in (Order.Status.PENDING, Order.Status.PAID):
+        #     return Response(
+        #         {"detail": f"Cannot cancel an order in status '{order.status}'."},
+        #         status=status.HTTP_409_CONFLICT,
+        #     )
 
-        order.status = Order.Status.CANCELLED
-        order.save(update_fields=["status", "updated_at"])
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        # order.status = Order.Status.CANCELLED
+        # order.save(update_fields=["status", "updated_at"])
+        # return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"detail": "Orders cannot be deleted"},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
 
     # ─── extra action: PATCH /orders/{id}/status/ ──────────────
     @action(detail=True, methods=["patch"], url_path="status")
@@ -126,4 +141,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(OrderSerializer(order, context=self.get_serializer_context()).data)
 
-    
+
+ 
+    # ─── Admin ────────────────────────────────────────────────
+
+    @extend_schema(
+        summary="List All Orders",
+        operation_id="list_all",
+        description="List all Orders to the admin",
+        tags=["Order/Admin"],
+    )
+    @action(detail=False, methods=["GET"], url_path="list_all")
+    def list_all(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Retrieve one Order",
+        operation_id="retrieve_one",
+        description="retrieve one Order to the admin",
+        tags=["Order/Admin"],
+    )
+    @action(detail=True, methods=["GET"], url_path="retrieve_one")
+    def retrieve_one(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
