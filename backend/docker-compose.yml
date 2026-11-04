@@ -1,6 +1,6 @@
 services:
   django-db:
-    image: mysql:8.0
+    image: mysql:8.4
     environment:
       MYSQL_DATABASE: django_db
       MYSQL_USER: django_user
@@ -11,13 +11,14 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
+      start_period: 30s
 
   flask-db:
-    image: mysql:8.0
+    image: mysql:8.4
     environment:
       MYSQL_DATABASE: flask_db
       MYSQL_USER: flask_user
@@ -28,18 +29,19 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
+      start_period: 30s
 
   django-app:
     # CHANGE: Use root as context, specify exact Dockerfile path
     build:
       context: .
-      dockerfile: backend/src/Dockerfile
+      dockerfile: src/DockerFile
     env_file:
-      - ./backend/src/.env
+      - ./src/.env
     environment:
       - DJANGO_DEBUG=0
       - DATABASE_HOST=django-db
@@ -51,7 +53,7 @@ services:
     command: gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     volumes:
       # CHANGE: Update your path to include backend/
-      - ./backend/src:/app
+      - ./src:/app
       - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
     ports:
       - "8000:8000"
@@ -65,9 +67,9 @@ services:
     # CHANGE: Use root as context, specify exact Dockerfile path
     build:
       context: .
-      dockerfile: backend/Inventory/Dockerfile
+      dockerfile: Inventory/DockerFile
     env_file:
-      - ./backend/Inventory/inventory.env
+      - ./Inventory/inventory.env
     environment:
       - DATABASE_HOST=flask-db
       - DATABASE_NAME=flask_db
@@ -75,7 +77,7 @@ services:
       - DATABASE_PASSWORD=flask_password
     volumes:
       # CHANGE: Update your path to include backend/
-      - ./backend/Inventory:/app
+      - ./Inventory:/app
     ports:
       - "50051:50051"
     depends_on:

@@ -155,7 +155,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -180,6 +180,26 @@ REST_FRAMEWORK= {
     # ],
 }
 
+
+#firebase notification
+# Firebase settings
+FIREBASE_CONFIG = {
+    "apiKey": os.getenv('FIREBASE_CONFIG_API_KEY'),
+    "authDomain": os.getenv('FIREBASE_CONFIG_AUTH_DOMAIN'),
+    "projectId": os.getenv('FIREBASE_CONFIG_PROJECT_ID'),
+    "storageBucket": os.getenv('FIREBASE_CONFIG_STORAGE_BUCKET'),
+    "messagingSenderId": os.getenv('FIREBASE_CONFIG_MESSAGING_SENDER_ID'),
+    "appId": os.getenv('FIREBASE_CONFIG_APP_ID'),
+}
+
+SERVICE_ACCOUNT_FILE = BASE_DIR / "secrets" / os.getenv('SERVICE_ACCOUNT_FILE')
+FIREBASE_POST_REQUEST_URL = os.getenv('FIREBASE_POST_REQUEST_URL')
+
+# INTERNAL_IPS = [
+#     # ...
+#     "127.0.0.1",
+#     # ...
+# ]
 
 PRODUCT_SERVICE_GRPC_HOST = os.getenv('PRODUCT_SERVICE_GRPC_HOST' , '')
 INVENTORY_GRPC_HOST = os.getenv('INVENTORY_GRPC_HOST' , '')
