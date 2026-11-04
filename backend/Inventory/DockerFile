@@ -18,10 +18,10 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy Flask app
-COPY backend/Inventory/ /app/
+COPY Inventory/ /app/
 
 # Create the entrypoint
-COPY backend/Inventory/docker/entrypoint.sh /app/docker/entrypoint.sh
+COPY Inventory/docker/entrypoint.sh /app/docker/entrypoint.sh
 RUN chmod +x /app/docker/entrypoint.sh
 
 EXPOSE 50051
