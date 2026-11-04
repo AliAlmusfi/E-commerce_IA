@@ -3,27 +3,56 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
 import { useAuth } from '../context/AuthContext'
 import Alert from '../components/feedback/Alert'
+import { fetchCurrentUser } from '../features/auth/services/authService'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const { login, isAuthenticated, isAdmin, loading } = useAuth()
+  const { login, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
+  // عند تحميل الصفحة: إذا كان المستخدم مسجلاً بالفعل، اجلب بياناته المحدثة ثم وجّهه
   useEffect(() => {
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname
-      navigate(isAdmin ? '/admin' : (from || '/home'), { replace: true })
-    }
-  }, [isAuthenticated, isAdmin, navigate, location])
+    const hasToken = !!localStorage.getItem('access_token')
+    if (!hasToken) return
+
+    const from = location.state?.from?.pathname
+    let cancelled = false
+
+    fetchCurrentUser()
+      .then((me) => {
+        if (cancelled) return
+        const userIsAdmin =
+          me?.is_staff === true ||
+          me?.is_superuser === true ||
+          me?.role === 'admin'
+        navigate(userIsAdmin ? '/admin' : (from || '/home'), { replace: true })
+      })
+      .catch(() => {
+        // توكن غير صالح — ابق على صفحة الدخول
+      })
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     try {
-      await login(email, password)
+      // login() ينتظر fetchCurrentUser() داخلياً، فيعيد user جاهزاً
+      const result = await login(email, password)
+      const freshUser = result.user
+
+      const userIsAdmin =
+        freshUser?.is_staff === true ||
+        freshUser?.is_superuser === true ||
+        freshUser?.role === 'admin'
+
+      const from = location.state?.from?.pathname
+      navigate(userIsAdmin ? '/admin' : (from || '/home'), { replace: true })
     } catch (err) {
       const data = err?.response?.data
       const msg = data?.detail || data?.message || data?.non_field_errors?.[0]

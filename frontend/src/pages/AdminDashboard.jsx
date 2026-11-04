@@ -1,11 +1,8 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react'
-import Navbar from '../components/layout/Navbar'
-import Footer from '../components/layout/Footer'
+import AdminNavbar from '../components/layout/AdminNavbar'
 import Loader from '../components/feedback/Loader'
-import Breadcrumb from '../components/common/Breadcrumb'
-import { Link } from 'react-router-dom'
 import { useNotification } from '../context/NotificationContext'
 import {
   fetchProducts,
@@ -33,56 +30,28 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className="header_section header_bg"><Navbar /></div>
+      <AdminNavbar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="cycle_section layout_padding" style={{ minHeight: '80vh' }}>
+      <div style={{
+        minHeight: 'calc(100vh - 70px)',
+        background: '#f5f6f8',
+        padding: '40px 0'
+      }}>
         <div className="container">
-          <Breadcrumb items={[{ label: 'Admin Dashboard' }]} />
-
-          <div style={{ marginBottom: '20px', textAlign: 'right' }}>
-            <Link
-              to="/home"
-              style={{
-                color: '#325662',
-                textDecoration: 'underline',
-                fontSize: '14px'
-              }}
-            >
-              ← Back to Store
-            </Link>
-          </div>
-
-          <h1 className="cycle_taital">Admin Dashboard</h1>
-
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', justifyContent: 'center' }}>
-            <button
-              onClick={() => setActiveTab('products')}
-              style={{
-                padding: '12px 30px',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                border: 'none',
-                cursor: 'pointer',
-                background: activeTab === 'products' ? '#325662' : '#e0e0e0',
-                color: activeTab === 'products' ? '#fff' : '#555'
-              }}
-            >
-              Products
-            </button>
-            <button
-              onClick={() => setActiveTab('orders')}
-              style={{
-                padding: '12px 30px',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                border: 'none',
-                cursor: 'pointer',
-                background: activeTab === 'orders' ? '#325662' : '#e0e0e0',
-                color: activeTab === 'orders' ? '#fff' : '#555'
-              }}
-            >
-              Orders
-            </button>
+          <div style={{ marginBottom: '30px' }}>
+            <h1 style={{
+              color: '#1a2332',
+              fontWeight: 'bold',
+              marginBottom: '8px',
+              fontSize: '28px'
+            }}>
+              {activeTab === 'products' ? 'Products Management' : 'Orders Management'}
+            </h1>
+            <p style={{ color: '#6b7280', margin: 0, fontSize: '14px' }}>
+              {activeTab === 'products'
+                ? 'Add, view, and delete products in your store.'
+                : 'Review and update the status of customer orders.'}
+            </p>
           </div>
 
           {activeTab === 'products' && <ProductsTab />}
@@ -90,7 +59,15 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <Footer />
+      <div style={{
+        background: '#1a2332',
+        color: '#c0c8d4',
+        textAlign: 'center',
+        padding: '20px',
+        fontSize: '13px'
+      }}>
+        Admin Panel · Cycle Store © 2026
+      </div>
     </>
   )
 }
@@ -129,7 +106,11 @@ function ProductsTab() {
     setSubmitting(true)
     try {
       const fd = new FormData()
-      Object.keys(form).forEach(k => fd.append(k, form[k]))
+      Object.keys(form).forEach(k => {
+        if (form[k] !== '' && form[k] !== null && form[k] !== undefined) {
+          fd.append(k, form[k])
+        }
+      })
       if (image) fd.append('image', image)
 
       await createProduct(fd)
@@ -139,9 +120,13 @@ function ProductsTab() {
       e.target.reset?.()
       await load()
     } catch (err) {
-      const msg = err?.response?.data?.detail
-        || err?.response?.data?.message
-        || 'Failed to create product.'
+      const data = err?.response?.data
+      let msg = 'Failed to create product.'
+      if (data && typeof data === 'object') {
+        const firstKey = Object.keys(data)[0]
+        const firstVal = data[firstKey]
+        msg = Array.isArray(firstVal) ? `${firstKey}: ${firstVal[0]}` : `${firstKey}: ${firstVal}`
+      }
       showError(msg)
     } finally {
       setSubmitting(false)
@@ -166,7 +151,8 @@ function ProductsTab() {
     borderRadius: '8px',
     outline: 'none',
     fontSize: '14px',
-    marginBottom: '12px'
+    marginBottom: '12px',
+    boxSizing: 'border-box'
   }
 
   return (
@@ -176,9 +162,13 @@ function ProductsTab() {
           background: '#fff',
           borderRadius: '16px',
           padding: '25px',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.06)'
+          boxShadow: '0 4px 15px rgba(0,0,0,0.06)',
+          position: 'sticky',
+          top: '90px'
         }}>
-          <h3 style={{ color: '#325662', marginBottom: '20px' }}>Add New Product</h3>
+          <h3 style={{ color: '#1a2332', marginBottom: '20px', fontSize: '18px' }}>
+             Add New Product
+          </h3>
           <form onSubmit={handleSubmit}>
             <input
               style={inputStyle}
@@ -229,15 +219,26 @@ function ProductsTab() {
               onChange={e => setForm({ ...form, company_name: e.target.value })}
             />
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: '#666', marginBottom: '5px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                color: '#666',
+                marginBottom: '5px',
+                fontWeight: '600'
+              }}>
                 Product Image
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={e => setImage(e.target.files[0])}
-                style={{ fontSize: '14px' }}
+                style={{ fontSize: '14px', width: '100%' }}
               />
+              {image && (
+                <small style={{ color: '#2e7d32', display: 'block', marginTop: '5px' }}>
+                  ✓ {image.name}
+                </small>
+              )}
             </div>
             <button
               type="submit"
@@ -267,9 +268,30 @@ function ProductsTab() {
           padding: '25px',
           boxShadow: '0 4px 15px rgba(0,0,0,0.06)'
         }}>
-          <h3 style={{ color: '#325662', marginBottom: '20px' }}>
-            Products ({products.length})
-          </h3>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px'
+          }}>
+            <h3 style={{ color: '#1a2332', margin: 0, fontSize: '18px' }}>
+               Products ({products.length})
+            </h3>
+            <button
+              onClick={load}
+              style={{
+                background: 'transparent',
+                border: '1.5px solid #ddd',
+                padding: '6px 14px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                color: '#666'
+              }}
+            >
+               Refresh
+            </button>
+          </div>
 
           {loading ? <Loader /> : (
             <div style={{ overflowX: 'auto' }}>
@@ -289,14 +311,41 @@ function ProductsTab() {
                     <tr key={p.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                       <td style={{ padding: '12px 8px' }}>
                         {p.image ? (
-                          <img src={p.image} alt={p.title} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px' }} />
+                          <img
+                            src={p.image}
+                            alt={p.title}
+                            style={{
+                              width: '50px',
+                              height: '50px',
+                              objectFit: 'cover',
+                              borderRadius: '6px'
+                            }}
+                          />
                         ) : (
-                          <div style={{ width: '50px', height: '50px', background: '#eee', borderRadius: '6px' }} />
+                          <div style={{
+                            width: '50px',
+                            height: '50px',
+                            background: '#eee',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#bbb',
+                            fontSize: '20px'
+                          }}>
+                            📷
+                          </div>
                         )}
                       </td>
-                      <td style={{ padding: '12px 8px', fontWeight: 'bold', color: '#325662' }}>{p.title}</td>
-                      <td style={{ padding: '12px 8px', textTransform: 'capitalize' }}>{p.category}</td>
-                      <td style={{ padding: '12px 8px' }}>${p.price}</td>
+                      <td style={{ padding: '12px 8px', fontWeight: 'bold', color: '#1a2332' }}>
+                        {p.title}
+                      </td>
+                      <td style={{ padding: '12px 8px', textTransform: 'capitalize', color: '#666' }}>
+                        {p.category}
+                      </td>
+                      <td style={{ padding: '12px 8px', color: '#1a2332', fontWeight: '600' }}>
+                        ${p.price}
+                      </td>
                       <td style={{ padding: '12px 8px' }}>
                         <span style={{
                           padding: '4px 10px',
@@ -322,6 +371,14 @@ function ProductsTab() {
                             fontSize: '13px',
                             fontWeight: 'bold'
                           }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = '#c62828'
+                            e.currentTarget.style.color = '#fff'
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = 'transparent'
+                            e.currentTarget.style.color = '#c62828'
+                          }}
                         >
                           Delete
                         </button>
@@ -331,7 +388,9 @@ function ProductsTab() {
                 </tbody>
               </table>
               {products.length === 0 && (
-                <p style={{ textAlign: 'center', padding: '30px', color: '#888' }}>No products yet.</p>
+                <p style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                  No products yet. Add your first product using the form.
+                </p>
               )}
             </div>
           )}
@@ -372,14 +431,28 @@ function OrdersTab() {
       success(`Order #${order.id} updated to "${newStatus}".`)
       await load()
     } catch (err) {
-      const msg = err?.response?.data?.detail
-        || err?.response?.data?.message
-        || err?.response?.data?.status?.[0]
-        || 'Failed to update status.'
+      const data = err?.response?.data
+      let msg = 'Failed to update status.'
+      if (data && typeof data === 'object') {
+        const firstKey = Object.keys(data)[0]
+        const firstVal = data[firstKey]
+        msg = Array.isArray(firstVal) ? firstVal[0] : String(firstVal)
+      }
       showError(msg)
     } finally {
       setUpdatingId(null)
     }
+  }
+
+  const getStatusBadgeColor = (status) => {
+    const colors = {
+      pending: { bg: '#fff3cd', text: '#856404' },
+      preparing: { bg: '#cce5ff', text: '#004085' },
+      'go out': { bg: '#d4edda', text: '#155724' },
+      delivered: { bg: '#d1ecf1', text: '#0c5460' },
+      completed: { bg: '#d4edda', text: '#155724' }
+    }
+    return colors[status] || { bg: '#e2e3e5', text: '#383d41' }
   }
 
   if (loading) return <Loader />
@@ -391,9 +464,30 @@ function OrdersTab() {
       padding: '25px',
       boxShadow: '0 4px 15px rgba(0,0,0,0.06)'
     }}>
-      <h3 style={{ color: '#325662', marginBottom: '20px' }}>
-        All Orders ({orders.length})
-      </h3>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
+        <h3 style={{ color: '#1a2332', margin: 0, fontSize: '18px' }}>
+           All Orders ({orders.length})
+        </h3>
+        <button
+          onClick={load}
+          style={{
+            background: 'transparent',
+            border: '1.5px solid #ddd',
+            padding: '6px 14px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#666'
+          }}
+        >
+           Refresh
+        </button>
+      </div>
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -403,44 +497,71 @@ function OrdersTab() {
               <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Date</th>
               <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Items</th>
               <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Total</th>
-              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Status</th>
+              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Current Status</th>
+              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Change Status</th>
             </tr>
           </thead>
           <tbody>
-            {orders.map(o => (
-              <tr key={o.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                <td style={{ padding: '12px 8px', fontWeight: 'bold', color: '#325662' }}>#{o.id}</td>
-                <td style={{ padding: '12px 8px', fontSize: '13px', color: '#888' }}>
-                  {new Date(o.created_at).toLocaleString()}
-                </td>
-                <td style={{ padding: '12px 8px' }}>{o.item_count ?? '—'}</td>
-                <td style={{ padding: '12px 8px' }}>${Number(o.total || 0).toFixed(2)}</td>
-                <td style={{ padding: '12px 8px' }}>
-                  <select
-                    value={o.status}
-                    onChange={e => handleStatusChange(o, e.target.value)}
-                    disabled={updatingId === o.id}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      border: '1.5px solid #ddd',
-                      fontSize: '13px',
+            {orders.map(o => {
+              const badge = getStatusBadgeColor(o.status)
+              return (
+                <tr key={o.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                  <td style={{ padding: '12px 8px', fontWeight: 'bold', color: '#1a2332' }}>
+                    #{o.id}
+                  </td>
+                  <td style={{ padding: '12px 8px', fontSize: '13px', color: '#888' }}>
+                    {new Date(o.created_at).toLocaleString()}
+                  </td>
+                  <td style={{ padding: '12px 8px', color: '#666' }}>
+                    {o.item_count ?? '—'}
+                  </td>
+                  <td style={{ padding: '12px 8px', color: '#1a2332', fontWeight: '600' }}>
+                    ${Number(o.total || 0).toFixed(2)}
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <span style={{
+                      padding: '5px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      background: badge.bg,
+                      color: badge.text,
                       textTransform: 'capitalize',
-                      cursor: updatingId === o.id ? 'not-allowed' : 'pointer',
-                      opacity: updatingId === o.id ? 0.6 : 1
-                    }}
-                  >
-                    {STATUS_OPTIONS.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
+                      display: 'inline-block'
+                    }}>
+                      {o.status_display || o.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <select
+                      value={o.status}
+                      onChange={e => handleStatusChange(o, e.target.value)}
+                      disabled={updatingId === o.id}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #ddd',
+                        fontSize: '13px',
+                        textTransform: 'capitalize',
+                        cursor: updatingId === o.id ? 'not-allowed' : 'pointer',
+                        opacity: updatingId === o.id ? 0.6 : 1,
+                        background: '#fff'
+                      }}
+                    >
+                      {STATUS_OPTIONS.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {orders.length === 0 && (
-          <p style={{ textAlign: 'center', padding: '30px', color: '#888' }}>No orders yet.</p>
+          <p style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+            No orders yet. Orders will appear here once customers start purchasing.
+          </p>
         )}
       </div>
     </div>
