@@ -5,11 +5,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
 from rest_framework.decorators import action
 from rest_framework import status 
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from drf_spectacular.utils import extend_schema
 
 from .models import User 
-from .serializers import UserSerializer , RegisterSerializer
+from .serializers import UserSerializer , RegisterSerializer , MeSerializer
 # Create your views here.
 
 
@@ -21,6 +22,8 @@ class UserViewSet (viewsets.ModelViewSet):
         self.permission_classes = [AllowAny]
         if self.action == 'list' or self.action == 'retrieve':
             self.permission_classes.append(IsAdminUser)
+        if self.action == 'me':
+            self.permission_classes.append(IsAuthenticated)
         
         return super().get_permissions()
     
@@ -78,6 +81,25 @@ class UserViewSet (viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Me",
+        operation_id="me",
+        description="retrieve user own info",
+        tags=["Users"],
+    )
+    @action(detail=False , methods=['GET'] , serializer_class = MeSerializer)
+    def me(self , request):
+        print(request.user.id)
+        print("////////////////////////////////////////////////////////////////////////////")
+        # if request.user == None:
+        #     return Response({"details":"You are Not Authenticated"} , status=status.HTTP_404_NOT_FOUND)
+        # user = User.objects.filter(pk=request.user.id).first()  
+        # serializer = self.get_serializer(isinstance=user)
+        # if serializer.is_valid():
+        #     return Response(serializer.data , status=status.HTTP_200_OK)
+        # return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(exclude=True)
     def update(self, request, *args, **kwargs):
