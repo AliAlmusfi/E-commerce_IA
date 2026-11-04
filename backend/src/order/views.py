@@ -97,6 +97,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
+    @extend_schema(exclude=True)
     def partial_update(self, request, *args, **kwargs):
         return Response(
             {"detail": "Orders cannot be edited. Use PATCH /orders/{id}/status/ "
