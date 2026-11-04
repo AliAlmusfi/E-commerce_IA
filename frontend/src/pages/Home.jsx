@@ -31,7 +31,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="header_section header_bg">
+      <div className="header_section header_bg ">
         <Navbar />
         <Banner />
       </div>
