@@ -26,13 +26,10 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
     class Meta:
-        db_table = 'users'
+        db_table = 'user'
     username = models.CharField(max_length=100 , unique=True)
     email = models.EmailField(unique=True)
     objects = CustomUserManager()
-    email     = models.EmailField(unique=True)
-    username  = models.CharField(max_length=100, unique=True)
-    full_name = models.CharField(max_length=100, blank=True)
 
     is_staff    = models.BooleanField(default=False)
     is_active   = models.BooleanField(default=True)
@@ -66,3 +63,15 @@ class User(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
             if self.password and not self.password.startswith(('pbkdf2_sha256$', 'bcrypt$', 'argon2')):
                 self.set_password(self.password)
         super().save(*args, **kwargs)
+
+
+
+
+
+
+
+# class Order (TimeStampedModel):
+#     class Meta:
+#         db_table = 'order'
+
+#     price = models.DecimalField
