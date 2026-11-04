@@ -1,45 +1,29 @@
-# Use an official Python runtime as a base image
-FROM python:3.13-slim AS base_image
+FROM python:3.13-slim
 
-# Set environment variables to keep Python from writing .pyc files and to ensure output is sent straight to logs
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-RUN mkdir /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+        pkg-config \
+        default-libmysqlclient-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory in the container
 WORKDIR /app
 
-# System deps: mysqlclient needs dev headers, grpcio/firebase need a compiler
-RUN apt-get update && apt-get install -y \
-    gcc \
-    python3-dev \
-    pkg-config \
-    default-libmysqlclient-dev \
-    && rm -rf /var/lib/apt/lists/**
-
-# Install system dependencies (if your app needs them, e.g., for MySQL client libraries)
-# RUN apt-get update && apt-get install -y default-libmysqlclient-dev gcc
-
-# Copy the requirements file and install Python dependencies
-COPY ../requirements.txt /app/requirements.txt
+# Context is root, so we can copy requirements directly!
+COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy the rest of your application code into the container
-COPY . /app/
+# Copy Django app from backend/src
+COPY backend/src/ /app/
 
-# Run migrations + collectstatic in an entrypoint, so they run every start
+# Copy entrypoint (Make sure it exists at backend/src/docker/entrypoint.sh)
+COPY backend/src/docker/entrypoint.sh /app/docker/entrypoint.sh
+RUN chmod +x /app/docker/entrypoint.sh
 
-RUN pip install supervisor
-COPY ./docker/supervisord.conf /app/supervisord.conf
-CMD ["supervisord", "-c", "/app/supervisord.conf"]
-
-COPY ./docker/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-# django http port
 EXPOSE 8000
-# gRPC server port
-EXPOSE 50052 
-ENTRYPOINT ["/app/entrypoint.sh"]
+
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

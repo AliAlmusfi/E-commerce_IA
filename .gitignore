@@ -71,6 +71,10 @@ migrations
 src/*/migrations/*
 !src/*/migrations/__init__.py
 
+backend/src/E_commerce/__pycache__/
+backend/src/e_commerce/__pycache__/
+
+
 __pycache__/
 *.py[cod]
 *.class
