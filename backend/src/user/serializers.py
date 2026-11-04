@@ -18,6 +18,21 @@ class UserSerializer(serializers.ModelSerializer):
             'id': {'read_only': True}, 
         }
 
+class MeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User 
+        fields = [
+            'id',
+            'username',
+            'email',
+            'is_staff',
+            'created_at',
+            'updated_at',
+        ]
+        extra_kwargs = {
+            'id': {'read_only': True}, 
+        }
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
