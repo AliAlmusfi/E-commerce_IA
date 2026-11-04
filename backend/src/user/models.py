@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager , AbstractBaseUser , PermissionsMixin , Group, Permission
 from tools.models import TimeStampedModel
+from e_commerce import settings
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
@@ -63,15 +64,3 @@ class User(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
             if self.password and not self.password.startswith(('pbkdf2_sha256$', 'bcrypt$', 'argon2')):
                 self.set_password(self.password)
         super().save(*args, **kwargs)
-
-
-
-
-
-
-
-# class Order (TimeStampedModel):
-#     class Meta:
-#         db_table = 'order'
-
-#     price = models.DecimalField

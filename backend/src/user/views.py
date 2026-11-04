@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from drf_spectacular.utils import extend_schema
 
-from .models import User
+from .models import User 
 from .serializers import UserSerializer , RegisterSerializer
 # Create your views here.
 
@@ -100,10 +100,4 @@ class UserViewSet (viewsets.ModelViewSet):
 
 
 
-# @action(detail=False , methods=['post'] , serializer_class=RegisterSerializer , url_path='register')
-#     def register(self , request):
-#         serializer = self.serializer_class(data = request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data , status = status.HTTP_201_CREATED)
-#         return Response(serializer.data , status = status.HTTP_400_BAD_REQUEST)
+    

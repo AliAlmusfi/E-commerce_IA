@@ -60,8 +60,6 @@ INSTALLED_APPS = [
 
 
     'user',
-    'order',
-    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -177,25 +175,3 @@ REST_FRAMEWORK= {
     #     # 'rest_framework.filters.OrderingFilter',
     # ],
 }
-
-
-
-#firebase notification
-# Firebase settings
-FIREBASE_CONFIG = {
-    "apiKey": os.getenv('FIREBASE_CONFIG_API_KEY'),
-    "authDomain": os.getenv('FIREBASE_CONFIG_AUTH_DOMAIN'),
-    "projectId": os.getenv('FIREBASE_CONFIG_PROJECT_ID'),
-    "storageBucket": os.getenv('FIREBASE_CONFIG_STORAGE_BUCKET'),
-    "messagingSenderId": os.getenv('FIREBASE_CONFIG_MESSAGING_SENDER_ID'),
-    "appId": os.getenv('FIREBASE_CONFIG_APP_ID'),
-}
-
-SERVICE_ACCOUNT_FILE = BASE_DIR / "secrets" / os.getenv('SERVICE_ACCOUNT_FILE')
-FIREBASE_POST_REQUEST_URL = os.getenv('FIREBASE_POST_REQUEST_URL')
-
-# INTERNAL_IPS = [
-#     # ...
-#     "127.0.0.1",
-#     # ...
-# ]
