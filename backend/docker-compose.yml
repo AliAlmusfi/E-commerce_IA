@@ -1,24 +1,23 @@
 services:
-  # --- Database for Django ---
   django-db:
-    image: mysql:latest
+    image: mysql:8.0
     environment:
       MYSQL_DATABASE: django_db
       MYSQL_USER: django_user
       MYSQL_PASSWORD: django_password
       MYSQL_ROOT_PASSWORD: root_password
     volumes:
-      - django_db_data:/var/lib/mysql  # Persist data even if the container is removed
+      - django_db_data:/var/lib/mysql
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
-      retries: 5
+      timeout: 5s
+      retries: 10
 
-  # --- Database for Flask ---
   flask-db:
-    image: mysql:latest
+    image: mysql:8.0
     environment:
       MYSQL_DATABASE: flask_db
       MYSQL_USER: flask_user
@@ -29,60 +28,66 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
-      retries: 5
+      timeout: 5s
+      retries: 10
 
-  # --- Your Django Application ---
   django-app:
-    build: ./src/  # Path to the folder containing Django's Dockerfile
+    # CHANGE: Use root as context, specify exact Dockerfile path
+    build:
+      context: .
+      dockerfile: backend/src/Dockerfile
     env_file:
-      - ./src/.env   # may be list of files
-    environment:            # optional overrides on top of env_file
+      - ./backend/src/.env
+    environment:
       - DJANGO_DEBUG=0
-      - DATABASE_HOST=django-db  # Use the service name as the hostname
+      - DATABASE_HOST=django-db
       - DATABASE_NAME=django_db
       - DATABASE_USER=django_user
       - DATABASE_PASSWORD=django_password
-    command: python manage.py runserver 0.0.0.0:8000
+      - FLASK_GRPC_HOST=flask-app
+      - FLASK_GRPC_PORT=50051
+    command: gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     volumes:
-      - ./src:/app  # Mount code for live reloading during development
+      # CHANGE: Update your path to include backend/
+      - ./backend/src:/app
       - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
     ports:
       - "8000:8000"
-      - "50052:50052"
     depends_on:
       django-db:
         condition: service_healthy
     networks:
       - app-network
 
-  # --- Your Flask (gRPC) Service ---
   flask-app:
-    build: ./Inventory
+    # CHANGE: Use root as context, specify exact Dockerfile path
+    build:
+      context: .
+      dockerfile: backend/Inventory/Dockerfile
     env_file:
-      - ./Inventory/inventory.env   # may be list of files
+      - ./backend/Inventory/inventory.env
     environment:
       - DATABASE_HOST=flask-db
       - DATABASE_NAME=flask_db
       - DATABASE_USER=flask_user
       - DATABASE_PASSWORD=flask_password
-    command: python app.py  # Command to start your Flask/gRPC server
     volumes:
-      - ./Inventory:/app
+      # CHANGE: Update your path to include backend/
+      - ./backend/Inventory:/app
     ports:
-      - "50051:50051"  # Expose the gRPC port if needed
+      - "50051:50051"
     depends_on:
-      - flask-db
+      flask-db:
+        condition: service_healthy
     networks:
       - app-network
 
-# Define the named volumes for data persistence
 volumes:
   django_db_data:
   flask_db_data:
 
-# Define the shared network
 networks:
   app-network:
     driver: bridge
