@@ -70,3 +70,7 @@ secrets
 migrations
 src/*/migrations/*
 !src/*/migrations/__init__.py
+
+__pycache__/
+*.py[cod]
+*.class

@@ -216,6 +216,7 @@ button {
 .header_bg {
     width: 100%;
     float: left;
+    overflow: visible;
 }
 
 .header_section::after {

@@ -113,7 +113,7 @@ export default function Navbar() {
                 <Link
                   to="/orders"
                   style={{
-                    color: '#325662',
+                    color: '#f7c17b',
                     fontWeight: '600',
                     textDecoration: 'none',
                     fontSize: '14px'
@@ -324,7 +324,7 @@ export default function Navbar() {
 
         {isAuthenticated ? (
           <>
-            <div style={{ padding: '10px 32px 20px', borderBottom: '1px solid #333' }}>
+            <div style={{ padding: '10px 32px 20px', borderBottom: '1px solid #333', zIndex: 1000, position: 'relative' , overflow: 'visible' }}>
               <div style={{ color: '#f7c17b', fontWeight: 'bold', fontSize: '16px' }}>
                 {displayName}
               </div>
