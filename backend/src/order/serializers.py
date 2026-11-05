@@ -203,9 +203,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     OrderItem.objects.create(
                         order=order,
                         product_id=item["product_id"],
-                        product_title=product["title"],             # snapshot
-                        product_manufacturer=product["manufacturer"],
-                        product_image=product["image"],
+                        # product_title=product["title"],             # snapshot
+                        # product_manufacturer=product["manufacturer"],
+                        # product_image=product["image"],
                         quantity=qty,
                         unit_price=unit_price,
                     )
