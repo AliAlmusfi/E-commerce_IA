@@ -4,11 +4,15 @@ from rest_framework.decorators import action
 from rest_framework import status 
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
+from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 
 from drf_spectacular.utils import extend_schema
 
 from .models import Product
 from .serializers import ProductSerializer
+from .filters import ProductFilter , ProductSearchFilter
 
 
 # Create your views here.
@@ -16,6 +20,20 @@ from .serializers import ProductSerializer
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+    pagination_class = PageNumberPagination
+    pagination_class.page_size=50
+    pagination_class.max_page_size=120
+    pagination_class.page_size_query_param='size'
+    # filtering/searching/ordering
+    filter_backends = [
+        DjangoFilterBackend,
+        ProductSearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = ProductFilter
+    search_fields = ['title', 'manufacture']
+    ordering_fields = ['title', 'manufacture', 'created_at', 'updated_at']
 
     def get_permissions(self):
         self.permission_classes = [IsAuthenticated]

@@ -111,9 +111,9 @@ def reserve_order(request, context:grpc.ServicerContext)->dict:
             
             product.stock -= qty    
             
-            return {
-                "success": True
-            }
+        return {
+            "success": True
+        }
     return {
         "success": False
     }
