@@ -39,6 +39,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'list_all' or self.action == 'retrieve_one':
             self.permission_classes.append(IsAdminUser)
+        if self.action == 'create':
+            self.permission_classes = [IsAuthenticated]
 
         return super().get_permissions()
 

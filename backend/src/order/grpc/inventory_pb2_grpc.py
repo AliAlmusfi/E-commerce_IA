@@ -3,7 +3,8 @@
 import grpc
 import warnings
 
-from order.grpc import inventory_pb2 as inventory__pb2
+from . import inventory_pb2 as inventory__pb2
+# import inventory_pb2_grpc as inventory__pb2_grpc
 
 GRPC_GENERATED_VERSION = '1.85.1'
 GRPC_VERSION = grpc.__version__

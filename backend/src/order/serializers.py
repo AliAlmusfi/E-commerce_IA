@@ -156,40 +156,40 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         client     = InventoryClient()
 
         # ─── Phase 1: fetch every product (no DB writes yet) ─────
-        # Note: your proto has no batch RPC, so this is N sequential calls.
-        # For small orders (2-5 items) that's fine; for larger ones, see "issues" below.
+        # Proto still has no batch GetProduct RPC, so this stays N calls.
+        # Fine for small carts; batch it later if carts grow.
         products = {}
         for item in items_data:
-            pid = item["product_id"]
+            pid     = item["product_id"]
             product = client.get_product(pid)
             if product is None:
-                raise serializers.ValidationError({"detail": f"Product {pid} does not exist."})
+                raise serializers.ValidationError(
+                    {"detail": f"Product {pid} does not exist."}
+                )
             if product["stock"] < item["quantity"]:
                 raise serializers.ValidationError(
-                    {"detail": f"Product '{product['title']}' has only {product['stock']} in stock."}
+                    {"detail": f"Product '{product['title']}' has only "
+                            f"{product['stock']} in stock."}
                 )
             products[pid] = product
 
-        # ─── Phase 2: reserve stock (gRPC, before the DB transaction) ─
-        # We do this outside the DB transaction so a slow inventory service
-        # doesn't hold a MySQL lock for seconds.
-        reserved = []   # list of (product_id, quantity) we've reserved
-        try:
-            for item in items_data:
-                result = client.reserve_product(item["product_id"], item["quantity"])
-                if not result["success"]:
-                    raise serializers.ValidationError(
-                        {"detail": f"Could not reserve product {item['product_id']}: {result['message']}"}
-                    )
-                reserved.append((item["product_id"], item["quantity"]))
-        except InventoryServiceError as e:
-            self._best_effort_release(client, reserved)
-            raise serializers.ValidationError({"detail": str(e)})
-        except Exception:
-            self._best_effort_release(client, reserved)
-            raise
+        # ─── Phase 2: reserve stock atomically (batch RPC) ──────
+        # ReserveOrder is all-or-nothing server-side. If it fails,
+        # nothing was reserved → no cleanup needed here.
+        # try:
+        result = client.reserve_order(
+            (item["product_id"], item["quantity"]) for item in items_data
+        )
+        # except InventoryServiceError as e:
+        #     raise serializers.ValidationError({"detail": str(e)})
 
-        # ─── Phase 3: persist order + items (fast, DB only) ──────
+        if not result["success"]:
+            # ReserveOrderResponse only carries `success`, so we re-check
+            # stock to produce a useful message. This is diagnostic only —
+            # the batch has already rolled back server-side.
+            self._raise_reservation_failure(client, items_data, products)
+
+        # ─── Phase 3: persist order + items ─────────────────────
         try:
             with transaction.atomic():
                 order = Order.objects.create(user=user)
@@ -203,9 +203,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     OrderItem.objects.create(
                         order=order,
                         product_id=item["product_id"],
-                        # product_title=product["title"],
-                        # product_manufacturer=product["manufacturer"],
-                        # product_image=product["image"],
+                        product_title=product["title"],             # snapshot
+                        product_manufacturer=product["manufacturer"],
+                        product_image=product["image"],
                         quantity=qty,
                         unit_price=unit_price,
                     )
@@ -214,28 +214,56 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 order.total = total
                 order.save(update_fields=["total"])
         except Exception:
-            # DB failed AFTER stock was reserved — we can't release it (no RPC).
-            # Log loudly so ops can reconcile manually.
-            import logging
-            logging.getLogger(__name__).error(
-                "Order save failed after reserving stock; LEAKED: %s", reserved,
-            )
+            # DB failed AFTER stock was reserved. Use addProductQuantity
+            # as a release mechanism (it just adds back to stock).
+            self._release_reserved(client, items_data)
             raise
 
         return order
 
     @staticmethod
-    def _best_effort_release(client, reserved):
+    def _raise_reservation_failure(client, items_data, products):
         """
-        Your proto has no ReleaseProduct RPC, so this is a no-op placeholder.
-        See the 'issues' section at the bottom — you should ask the Flask team to add one.
+        Best-effort diagnosis for a failed batch reserve.
+        Re-fetches stock to identify the shortfall, then raises.
         """
-        if not reserved:
-            return
-        import logging
-        logging.getLogger(__name__).warning(
-            "Partial reserve, no release RPC available. Leaked: %s", reserved,
+        for item in items_data:
+            pid = item["product_id"]
+            current = client.get_stock(pid)
+            if current is None:
+                raise serializers.ValidationError(
+                    {"detail": f"Product {pid} is no longer available."}
+                )
+            if current < item["quantity"]:
+                raise serializers.ValidationError(
+                    {"detail": f"Product '{products[pid]['title']}' has only "
+                            f"{current} in stock."}
+                )
+        # None of the products look short → likely a race with another order.
+        raise serializers.ValidationError(
+            {"detail": "Could not reserve stock (a concurrent order may have "
+                    "taken it). Please try again."}
         )
+
+
+    @staticmethod
+    def _release_reserved(client, items_data):
+        """
+        Compensate: return reserved stock back to inventory via addProductQuantity.
+        Called only when the DB write fails after a successful batch reserve.
+        Logs failures so ops can reconcile manually.
+        """
+        import logging
+        log = logging.getLogger(__name__)
+
+        for item in items_data:
+            pid, qty = item["product_id"], item["quantity"]
+            try:
+                result = client.add_product_quantity(pid, qty)
+                if not result["success"]:
+                    log.error("Failed to release stock: product=%s qty=%s", pid, qty)
+            except Exception as e:
+                log.error("Exception releasing stock: product=%s qty=%s err=%s", pid, qty, e)
 
 
 

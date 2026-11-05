@@ -6,6 +6,8 @@ service InventoryService {
   rpc GetProductById (GetProductByIdRequest) returns (Product);
   rpc GetProductQuantity (GetProductQuantityRequest) returns (ProductQuantity);
   rpc ReserveProduct (ReserveProductRequest) returns (ReserveProductResponse);
+  rpc ReserveOrder (ReserveOrderRequest) returns (ReserveOrderResponse);
+  rpc addProductQuantity (ReserveProductRequest) returns (ReserveOrderResponse);
 }
 
 message GetProductByIdRequest {
@@ -39,4 +41,12 @@ message ReserveProductResponse {
   bool success = 1;
   int32 remaining_stock = 2;
   string message = 3;
+}
+
+message ReserveOrderRequest {
+  repeated ReserveProductRequest products = 1;
+}
+
+message ReserveOrderResponse {
+    bool success = 1;
 }
