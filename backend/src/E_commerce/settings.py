@@ -58,7 +58,7 @@ INSTALLED_APPS = [
     'dotenv',
     'corsheaders',
 
-
+    'product',
     'user',
     'order',
     'notifications',
