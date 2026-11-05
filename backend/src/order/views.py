@@ -8,6 +8,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
 
 
+
+
+
 from drf_spectacular.utils import extend_schema
 
 from .models import Order, OrderItem
@@ -72,7 +75,10 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     # ─── create ────────────────────────────────────────────────
 
-  
+
+
+
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -133,7 +139,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         order = self.get_object()
 
-        if not request.user.is_staff and request.data.get("status") != Order.Status.CANCELLED:
+        if not request.user.is_staff: #and request.data.get("status") != Order.Status.CANCELLED:
             return Response(
                 {"detail": "Only staff can change order status (except to cancel)."},
                 status=status.HTTP_403_FORBIDDEN,
