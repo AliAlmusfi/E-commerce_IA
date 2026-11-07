@@ -2,6 +2,7 @@ from concurrent import futures
 
 from flask import Flask, jsonify
 import grpc
+import time
 
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -17,7 +18,7 @@ from google.protobuf.json_format import MessageToDict
 from flask_migrate import Migrate
 # Import your custom engine, Base, and a compatibility wrapper
 from db import engine, Base
-from db_models import RPCServiceEnum
+from db_models import RPCServiceEnum, Request
 
 from products.controllers import get_product_stock_by_id, \
                     reserve_product, reserve_order,\
@@ -25,7 +26,9 @@ from products.controllers import get_product_stock_by_id, \
 from products.validator import Validator
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "products"))
-# from requests_log.services import RequestService
+
+from requests_log.services import RequestBuilder
+from products.grpc_exceptions import exception
 
 GRPC_PORT = "50051"
 
@@ -42,44 +45,113 @@ db_wrapper = DummyDB(Base.metadata, engine)
 migrate = Migrate(app, db_wrapper)
 
 
+
 # gRPC code
+def do_finally(request_builder:RequestBuilder, request_start_time:float):
+    request_builder.set_duration_ms(int((time.perf_counter() - request_start_time) * 1000))
+    request_log:Request = request_builder.get_result()
+    try:
+        RequestBuilder.create_request_log(request_log)
+        request_builder.reset()
+    except Exception as e:
+        exception(e)
+    finally:
+        db_session.remove()
 class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
     def GetProductStockById(self, request, context):
         try:
+            request_start_time = time.perf_counter()
+            request_builder = (
+                RequestBuilder()
+                .set_request_payload(
+                    MessageToDict(request, preserving_proto_field_name=True)
+                )
+                .set_rpc_service(rpc_service)
+            )
+            
             rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
+            
             Validator.validate(rpc_service, request, context)
+            request_builder.set_user_id(request.user_id)
+            
             data:dict = get_product_stock_by_id(request=request, context=context) #controller method that gets the product data dict
             return inventory_pb2.GetProductStockByIdResponse(**data)
         finally:
-            db_session.remove()
+            do_finally(request_builder, request_start_time)
+
     def ReserveProduct(self, request, context):
         try:
-            Validator.validate(RPCServiceEnum.RESERVE_PRODUCT, request, context)
+            request_start_time = time.perf_counter()
+            request_builder = (
+                RequestBuilder()
+                .set_request_payload(
+                    MessageToDict(request, preserving_proto_field_name=True)
+                )
+                .set_rpc_service(rpc_service)
+            )
+            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
+            Validator.validate(rpc_service, request, context)
+            request_builder.set_user_id(request.user_id)
             data:dict = reserve_product(request=request, context=context) #controller method that do reservation and gets the data dict
             return inventory_pb2.ReserveProductResponse(**data)
         finally:
-            db_session.remove()
+            do_finally(request_builder, request_start_time)
+
     def ReserveOrder(self, request, context):
         try:
-            Validator.validate(RPCServiceEnum.RESERVE_ORDER, request, context)
+            request_start_time = time.perf_counter()
+            request_builder = (
+                RequestBuilder()
+                .set_request_payload(
+                    MessageToDict(request, preserving_proto_field_name=True)
+                )
+                .set_rpc_service(rpc_service)
+            )
+            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
+            Validator.validate(rpc_service, request, context)
+            request_builder.set_user_id(request.user_id)
             data:dict = reserve_order(request=request, context=context)
             return inventory_pb2.ReserveOrderResponse(**data)
         finally:
-            db_session.remove()
+            do_finally(request_builder, request_start_time)
+
     def UpdateProductQuantity(self, request, context):
         try:
-            Validator.validate(RPCServiceEnum.UPDATE_PRODUCT_QUANTITY, request, context)
+            request_start_time = time.perf_counter()
+            request_builder = (
+                RequestBuilder()
+                .set_request_payload(
+                    MessageToDict(request, preserving_proto_field_name=True)
+                )
+                .set_rpc_service(rpc_service)
+            )
+            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
+            Validator.validate(rpc_service, request, context)
+            request_builder.set_user_id(request.user_id)
             data:dict = update_product_quantity(request=request, context=context)
             return inventory_pb2.UpdateProductQuantityResponse(**data)
         finally:
-            db_session.remove()
+            do_finally(request_builder, request_start_time)
+
     def CreateProductStorage(self, request, context):
         try:
-            Validator.validate(RPCServiceEnum.Create_Product_Storage, request, context)
+            request_start_time = time.perf_counter()
+            request_builder = (
+                RequestBuilder()
+                .set_request_payload(
+                    MessageToDict(request, preserving_proto_field_name=True)
+                )
+                .set_rpc_service(rpc_service)
+            )
+            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
+            Validator.validate(rpc_service, request, context)
+            request_builder.set_user_id(request.user_id)
             data:dict = create_product_storage(request=request, context=context)
             return inventory_pb2.CreateProductStorageResponse(**data)
         finally:
-            db_session.remove()
+            do_finally(request_builder, request_start_time)
+
+
 
 def start_grpc_server():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
