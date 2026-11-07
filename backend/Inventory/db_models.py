@@ -1,22 +1,31 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 from db import Model
-
 
 class Product(Model):
     __tablename__ = 'products'
     id = Column(Integer, primary_key=True)
-    title = Column(String(50), unique=True, nullable=False)
-    manufacturer = Column(String(60), unique=False)
-    image = Column(String(255), unique=False, nullable=False, default="image.jpg")
-    stock = Column(Integer, unique=False, nullable=False, default=0)
-    price = Column(Float, unique=False, nullable=False)
+    product_id = Column(Integer, unique=True, nullable=False)
 
-    def __init__(self, title, stock, price, image=None, manufacturer=None):
-        self.title = title
+     # one-to-one back-reference
+    storage = relationship("Storage", back_populates="product", uselist=False)
+
+    def __init__(self, product_id):
+        self.product_id = product_id
+
+    def __repr__(self):
+        return f'<product: id={self.id}, product_id={self.product_id}, stock={self.storage.stock}>'
+
+    
+class Storage(Model):
+    __tablename__ = 'storage'
+    id = Column(Integer, ForeignKey('products.id'), primary_key=True)
+    stock = Column(Integer, unique=False, nullable=False, default=0)
+
+    product = relationship("Product", back_populates="storage")
+
+    def __init__(self, stock=0):
         self.stock = stock
-        self.price = price
-        if(image): self.image = image
-        self.manufacturer = manufacturer if manufacturer else ""
     
     def __repr__(self):
-        return f'<Product {self.title!r}>'
+        return f'<storage: product_id={self.id}, stock={self.stock}>'
