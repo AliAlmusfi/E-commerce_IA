@@ -11,18 +11,18 @@ def product_image_upload_path(instance , filename):
     return f'products/{instance.id}/{filename}'
 class Product(TimeStampedModel):
     class Meta:
-        db_table = 'product'
+        db_table = 'products'
 
     title = models.CharField(max_length=20 , null= False , blank=False)
     manufacture = models.CharField(max_length=20 , null= False , blank=False)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0 , blank=True)
     description = models.CharField(max_length=100)
-    stock = models.IntegerField()
+    # stock = models.IntegerField()
     image = models.ImageField(
-        null=True,
+        null=False,
         blank=True,
         upload_to=product_image_upload_path,
-        # default="defaults/products/default.png"
+        default="products/defaults/default.png"
     )
 
 

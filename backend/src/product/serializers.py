@@ -10,7 +10,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'description',
             'manufacture',
             'price',
-            'stock',
+            # 'stock',
             'image',
         ]
         extra_kwargs = {

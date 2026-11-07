@@ -12,16 +12,18 @@ import proto.generated.inventory_pb2_grpc as inventory_pb2_grpc
 
 from db import db_session, init_db
 from config import Config
-from products.controllers import get_product_stock_by_id, \
-                    reserve_product, reserve_order,\
-                    update_product_quantity, create_product_storage
+from google.protobuf.json_format import MessageToDict
 
 from flask_migrate import Migrate
 # Import your custom engine, Base, and a compatibility wrapper
 from db import engine, Base
 from db_models import RPCServiceEnum
 
+from products.controllers import get_product_stock_by_id, \
+                    reserve_product, reserve_order,\
+                    update_product_quantity, create_product_storage
 from products.validator import Validator
+# from requests_log.services import RequestService
 
 GRPC_PORT = "50051"
 
@@ -42,7 +44,8 @@ migrate = Migrate(app, db_wrapper)
 class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
     def GetProductStockById(self, request, context):
         try:
-            Validator.validate(RPCServiceEnum.GET_PRODUCT_Stock_BY_Id, request, context)
+            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
+            Validator.validate(rpc_service, request, context)
             data:dict = get_product_stock_by_id(request=request, context=context) #controller method that gets the product data dict
             return inventory_pb2.GetProductStockByIdResponse(**data)
         finally:
