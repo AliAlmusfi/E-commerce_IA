@@ -37,12 +37,11 @@ class Storage(Model):
 
 
 class RPCServiceEnum(enum.Enum):
-    GET_PRODUCT_BY_Id = 'get_product_by_id'
-    GET_PRODUCT_QUANTITY = 'get_product_quantity'
+    GET_PRODUCT_Stock_BY_Id = 'get_product_stock_by_id'
     RESERVE_PRODUCT = 'reserve_product'
     RESERVE_ORDER = 'reserve_order'
     UPDATE_PRODUCT_QUANTITY = 'update_product_quantity'
-    CREATE_PRODUCT = 'create_product'
+    Create_Product_Storage = 'create_product_storage'
 
 class Request(Base):
     __tablename__ = 'requests_log'
