@@ -1,0 +1,1 @@
+#  python -m grpc_tools.protoc -I ./proto --python_out=./proto/generated --pyi_out=./proto/generated --grpc_python_out=./proto/generated ./proto/inventory.proto 

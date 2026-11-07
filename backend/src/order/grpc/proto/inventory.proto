@@ -1,52 +1,71 @@
 syntax = "proto3";
 
-package inventory.v1;
+package inventory.v2;
 
-service InventoryService {
-  rpc GetProductById (GetProductByIdRequest) returns (Product);
-  rpc GetProductQuantity (GetProductQuantityRequest) returns (ProductQuantity);
-  rpc ReserveProduct (ReserveProductRequest) returns (ReserveProductResponse);
-  rpc ReserveOrder (ReserveOrderRequest) returns (ReserveOrderResponse);
-  rpc addProductQuantity (ReserveProductRequest) returns (ReserveOrderResponse);
+service InventoryService{
+    rpc GetProductStockById(GetProductStockByIdRequest) returns (GetProductStockByIdResponse);
+    rpc ReserveProduct(ReserveProductRequest) returns (ReserveProductResponse);
+    rpc ReserveOrder(ReserveOrderRequest) returns (ReserveOrderResponse);
+    rpc UpdateProductQuantity(UpdateProductQuantityRequest) returns (UpdateProductQuantityResponse);
+    rpc CreateProductStorage(CreateProductStorageRequest) returns (CreateProductStorageResponse);
 }
 
-message GetProductByIdRequest {
-  int64 id = 1;
+
+message GetProductStockByIdRequest{
+    int64 user_id = 1;
+    int64 product_id = 2;
+}
+message GetProductStockByIdResponse{
+    int64 product_id = 1;
+    int32 stock = 2;
 }
 
-message GetProductQuantityRequest {
-  int64 id = 1;
+message ReserveProductRequest{
+    int64 user_id = 1;
+    int64 product_id = 2;
+    int32 quantity = 3;
+    string idempotency_key = 4;
 }
-
-message Product {
-  int64 id = 1;
-  string title = 2;
-  string manufacturer = 3;
-  string image = 4;
-  int32 stock = 5;
-  double price = 6;
-}
-
-message ProductQuantity {
-  int64 id = 1;
-  int32 stock = 2;
-}
-
-message ReserveProductRequest {
-  int64 id = 1;
-  int32 quantity = 2;
-}
-
-message ReserveProductResponse {
-  bool success = 1;
-  int32 remaining_stock = 2;
-  string message = 3;
-}
-
-message ReserveOrderRequest {
-  repeated ReserveProductRequest products = 1;
-}
-
-message ReserveOrderResponse {
+message ReserveProductResponse{
     bool success = 1;
+    int32 remaining_stock = 2;
+    string msg = 3;
+}
+
+
+message ReserveOrderItem{
+    int64 product_id = 1;
+    int32 quantity = 2;
+}
+message ReserveOrderRequest{
+    int64 user_id = 1;
+    repeated ReserveOrderItem products = 2;
+    string idempotency_key = 3;
+}
+message ReserveOrderResponse{
+    bool success = 1;
+    string msg = 2;
+    repeated int64 failed_product_ids = 3;
+}
+
+message UpdateProductQuantityRequest{
+    int64 user_id = 1;
+    int64 product_id = 2;
+    int64 amount = 3;
+    string idempotency_key = 4;
+}
+message UpdateProductQuantityResponse{
+    bool success = 1;
+    string msg = 2;
+}
+
+message CreateProductStorageRequest{
+    int64 user_id = 1;
+    int64 product_id = 2;
+    int32 stock = 3;
+    string idempotency_key = 4;
+}
+message CreateProductStorageResponse{
+    int64 product_id = 1;
+    int32 stock = 2;
 }

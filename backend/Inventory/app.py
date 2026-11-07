@@ -12,13 +12,20 @@ import proto.generated.inventory_pb2_grpc as inventory_pb2_grpc
 
 from db import db_session, init_db
 from config import Config
-from products.controllers import get_product_by_id, \
-        get_product_quantity, reserve_product, \
-        reserve_order, add_product_quantity
+from google.protobuf.json_format import MessageToDict
 
 from flask_migrate import Migrate
 # Import your custom engine, Base, and a compatibility wrapper
 from db import engine, Base
+from db_models import RPCServiceEnum
+
+from products.controllers import get_product_stock_by_id, \
+                    reserve_product, reserve_order,\
+                    update_product_quantity, create_product_storage
+from products.validator import Validator
+# from requests_log.services import RequestService
+
+GRPC_PORT = "50051"
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -35,45 +42,51 @@ migrate = Migrate(app, db_wrapper)
 
 # gRPC code
 class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
-    def GetProductById(self, request, context):
+    def GetProductStockById(self, request, context):
         try:
-            data:dict = get_product_by_id(request=request, context=context) #controller method that gets the product data dict
-            return inventory_pb2.Product(**data)
-        finally:
-            db_session.remove()
-    def GetProductQuantity(self, request, context):
-        try:
-            data:dict = get_product_quantity(request=request, context=context) #controller method that gets the product quantity data dict
-            return inventory_pb2.ProductQuantity(**data)
+            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
+            Validator.validate(rpc_service, request, context)
+            data:dict = get_product_stock_by_id(request=request, context=context) #controller method that gets the product data dict
+            return inventory_pb2.GetProductStockByIdResponse(**data)
         finally:
             db_session.remove()
     def ReserveProduct(self, request, context):
         try:
+            Validator.validate(RPCServiceEnum.RESERVE_PRODUCT, request, context)
             data:dict = reserve_product(request=request, context=context) #controller method that do reservation and gets the data dict
             return inventory_pb2.ReserveProductResponse(**data)
         finally:
             db_session.remove()
     def ReserveOrder(self, request, context):
         try:
+            Validator.validate(RPCServiceEnum.RESERVE_ORDER, request, context)
             data:dict = reserve_order(request=request, context=context)
             return inventory_pb2.ReserveOrderResponse(**data)
         finally:
             db_session.remove()
-    def addProductQuantity(self, request, context):
+    def UpdateProductQuantity(self, request, context):
         try:
-            data:dict = add_product_quantity(request=request, context=context)
-            return inventory_pb2.ReserveOrderResponse(**data)
+            Validator.validate(RPCServiceEnum.UPDATE_PRODUCT_QUANTITY, request, context)
+            data:dict = update_product_quantity(request=request, context=context)
+            return inventory_pb2.UpdateProductQuantityResponse(**data)
         finally:
             db_session.remove()
-    
+    def CreateProductStorage(self, request, context):
+        try:
+            Validator.validate(RPCServiceEnum.Create_Product_Storage, request, context)
+            data:dict = create_product_storage(request=request, context=context)
+            return inventory_pb2.CreateProductStorageResponse(**data)
+        finally:
+            db_session.remove()
+
 def start_grpc_server():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     inventory_pb2_grpc.add_InventoryServiceServicer_to_server(InventoryServiceServicer(), server)
     
     # Listen on a dedicated port for HTTP/2 gRPC traffic
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port(f'[::]:{GRPC_PORT}')
     server.start()
-    print("gRPC server started on port 50051...")
+    print(f"gRPC server started on port {GRPC_PORT}...")
     return server
 
 # @app.teardown_appcontext
