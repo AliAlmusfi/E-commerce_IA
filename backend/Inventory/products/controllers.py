@@ -5,7 +5,7 @@ import grpc
 from db import db_session
 from db_models import Product, Storage
 
-from grpc_exceptions import product_not_found, field_must_be_positive, \
+from .grpc_exceptions import product_not_found, field_must_be_positive, \
                             insufficient_stock, DB_INTEGRITY_ERROR, \
                             exception
 
