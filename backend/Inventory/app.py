@@ -23,6 +23,8 @@ from products.controllers import get_product_stock_by_id, \
                     reserve_product, reserve_order,\
                     update_product_quantity, create_product_storage
 from products.validator import Validator
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "products"))
 # from requests_log.services import RequestService
 
 GRPC_PORT = "50051"

@@ -1,7 +1,7 @@
 import grpc
 from db_models import RPCServiceEnum
 
-from grpc_exceptions import field_missing, field_must_be_positive, \
+from .grpc_exceptions import field_missing, field_must_be_positive, \
                             field_must_not_be_zero
 
 class Validator:

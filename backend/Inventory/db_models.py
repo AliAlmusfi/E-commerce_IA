@@ -1,4 +1,5 @@
 import enum
+import grpc
 from uuid import uuid4
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, ForeignKey, String, Enum, DateTime
@@ -52,7 +53,7 @@ class Request(Base):
     rpc_service = Column(Enum(RPCServiceEnum), nullable=False, unique=False)
     request_payload = Column(MutableDict.as_mutable(JSON), nullable=True, unique=False)
     
-    response_status = Column(Integer, nullable=False, unique=False)
+    response_status = Column(Enum(grpc.StatusCode), nullable=False, unique=False)
     response_payload = Column(MutableDict.as_mutable(JSON), nullable=True, unique=False)
     
     duration_ms = Column(Integer, nullable=False)
