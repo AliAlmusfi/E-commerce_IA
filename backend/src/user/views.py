@@ -10,14 +10,14 @@ from rest_framework.response import Response
 
 from drf_spectacular.utils import extend_schema
 
-from .models import Users 
+from .models import User
 from .serializers import UserSerializer , RegisterSerializer , MeSerializer
 from .services import create_user
 # Create your views here.
 
 
 class UserViewSet (viewsets.ModelViewSet):
-    queryset = Users.objects.all()
+    queryset = User.objects.all()
     serializer_class = UserSerializer
 
     def get_permissions(self):

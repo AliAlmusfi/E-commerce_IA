@@ -4,23 +4,48 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
-from .models import Orders, OrderItems
-from backend.src.tools.grpc.client import InventoryClient, InventoryServiceError
+from .models import Order, OrderItem
+# from backend.src.tools.grpc.client import InventoryClient, InventoryServiceError
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
     subtotal = serializers.SerializerMethodField()
-
+    # product_title = serializers.SerializerMethodField()
+    # product_manufacturer = serializers.SerializerMethodField()
+    # product_image = serializers.SerializerMethodField()
+    # product_description = serializers.SerializerMethodField()
+    
     class Meta:
-        model  = OrderItems
+        model  = OrderItem
         fields = [
             "id", "product_id", "quantity", "unit_price", "subtotal",
+            # "product_title", "product_manufacturer",  "product_image", "product_description"
         ]
         read_only_fields = fields
 
     def get_subtotal(self, obj):
         return obj.quantity * obj.unit_price
 
+    # def get_product_title(self, obj) -> str:
+    #     product_map = self.context.get('product_map', {})
+    #     product = product_map.get(obj.product_id)
+    #     return product.get("title") if product else "Unknown Product"
+
+    # def get_product_image(self, obj) -> str:
+    #     product_map = self.context.get('product_map', {})
+    #     product = product_map.get(obj.product_id) 
+    #     return product.get("image") if product else ""
+
+    # def get_product_manufacturer(self, obj) -> str:
+    #     product_map = self.context.get('product_map', {})
+    #     product = product_map.get(obj.product_id)
+    #     return product.get("manufacturer") if product else ""
+    
+    # def get_product_manufacturer(self, obj) -> str:
+    #     product_map = self.context.get('product_map', {})
+    #     product = product_map.get(obj.product_id)
+    #     return product.get("description") if product else ""
+    
 
 class OrderSerializer(serializers.ModelSerializer):
     items          = OrderItemSerializer(many=True, read_only=True)
@@ -28,7 +53,7 @@ class OrderSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
-        model  = Orders
+        model  = Order
         fields = [
             "id", "user_id", "user_email", "status", "status_display",
             "total", "items", "created_at", "updated_at",
@@ -54,7 +79,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     items = OrderItemCreateSerializer(many=True, write_only=True)
 
     class Meta:
-        model  = Orders
+        model  = Order
         fields = ["items"]
 
     def validate_items(self, value):
@@ -75,7 +100,7 @@ class OrderStatusUpdateSerializer(serializers.ModelSerializer):
 
 
     class Meta:
-        model  = Orders
+        model  = Order
         fields = ["status"]
 
 
@@ -94,7 +119,7 @@ class OrderListSerializer(serializers.ModelSerializer):
     item_count     = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Orders
+        model  = Order
         fields = [
             "id",
             "status",
