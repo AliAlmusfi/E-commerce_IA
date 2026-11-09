@@ -5,18 +5,55 @@ from typing import Optional, Iterable
 from django.conf import settings
 
 # ✅ Updated imports based on your new generated code
-from backend.src.tools.grpc.inventory_pb2 import (
+from .inventory_pb2 import (
     GetProductStockByIdRequest,
     ReserveProductRequest,
     ReserveOrderRequest,
     ReserveOrderItem,
     UpdateProductQuantityRequest,
+    CreateProductStorageRequest,
 )
-from backend.src.tools.grpc.inventory_pb2_grpc import InventoryServiceStub
+from .inventory_pb2_grpc import InventoryServiceStub
 
 
 class InventoryServiceError(Exception):
     """Raised when the inventory service is unreachable or returns an error."""
+    def __init__(self, message: str, code: grpc.StatusCode | None = None, details: str = ""):
+        super().__init__(message)
+        self.code = code
+        self.details = details
+
+class InventoryUnavailableError(InventoryServiceError):
+    """Service unreachable / timed out — safe to retry or surface as 503."""
+class InventoryClientError(InventoryServiceError):
+    """Server rejected the request (NOT_FOUND, INVALID_ARGUMENT, …) — do not retry."""
+class InventoryServerError(InventoryServiceError):
+    """Server-side failure (INTERNAL, UNKNOWN) — likely a bug, do not retry."""
+
+# Codes that mean "try again later"
+_RETRYABLE = {
+    grpc.StatusCode.UNAVAILABLE,
+    grpc.StatusCode.DEADLINE_EXCEEDED
+}
+# Codes that mean "the server understood but rejected the request"
+_CLIENT = {
+    grpc.StatusCode.NOT_FOUND,
+    grpc.StatusCode.INVALID_ARGUMENT,
+    grpc.StatusCode.PERMISSION_DENIED,
+    grpc.StatusCode.UNAUTHENTICATED,
+    grpc.StatusCode.FAILED_PRECONDITION,
+    grpc.StatusCode.RESOURCE_EXHAUSTED,  # arguably retryable; see note below
+}
+
+
+def _raise_for_rpc(e: grpc.RpcError, op: str) -> None:
+    code = e.code()
+    msg = f"{op} failed: {code}"
+    if code in _RETRYABLE:
+        raise InventoryUnavailableError(msg, code=code, details=e.details()) from e
+    if code in _CLIENT:
+        raise InventoryClientError(msg, code=code, details=e.details()) from e
+    raise InventoryServerError(msg, code=code, details=e.details()) from e
 
 
 class InventoryClient:
@@ -42,13 +79,7 @@ class InventoryClient:
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 return None
-            raise InventoryServiceError(
-                f"GetProductStockById({product_id}) failed: {e.code()}"
-            ) from e
-
-        # If the server returns 0 for product_id, it means it wasn't found
-        if resp.product_id == 0:
-            return None
+            _raise_for_rpc(e, f"GetProductStockById({product_id})")
 
         return resp.stock
 
@@ -72,9 +103,7 @@ class InventoryClient:
                     timeout=self.timeout,
                 )
         except grpc.RpcError as e:
-            raise InventoryServiceError(
-                f"ReserveProduct({product_id}, {quantity}) failed: {e.code()}"
-            ) from e
+            _raise_for_rpc(e, f"ReserveProduct({product_id}, {quantity})")
 
         return {
             "success": resp.success,
@@ -110,9 +139,7 @@ class InventoryClient:
                     request, timeout=self.timeout
                 )
         except grpc.RpcError as e:
-            raise InventoryServiceError(
-                f"ReserveOrder failed: {e.code()}"
-            ) from e
+            _raise_for_rpc(e, f"ReserveOrder")
 
         # ✅ Capture failed_product_ids and msg from the new response
         return {
@@ -141,11 +168,48 @@ class InventoryClient:
                     timeout=self.timeout,
                 )
         except grpc.RpcError as e:
-            raise InventoryServiceError(
-                f"UpdateProductQuantity({product_id}, {amount}) failed: {e.code()}"
-            ) from e
+            _raise_for_rpc(e, f"UpdateProductQuantity({product_id}, {amount})")
 
         return {
             "success": resp.success,
             "message": resp.msg
         }
+
+    def create_product_storage(self, product_id: int, stock: int, user_id: int, idempotency_key: str = None) -> dict:
+        """
+        Adjust stock for a product (e.g. release reserved stock).
+        Note: 'amount' can be positive or negative depending on the operation.
+        """
+        idem_key = idempotency_key or str(uuid.uuid4())
+
+        try:
+            with grpc.insecure_channel(self.host) as channel:
+                resp = self._stub(channel).UpdateProductQuantity(
+                    CreateProductStorageRequest(
+                        user_id=user_id,
+                        product_id=product_id,
+                        stock=stock,
+                        idempotency_key=idem_key
+                    ),
+                    timeout=self.timeout,
+                )
+        except grpc.RpcError as e:
+            _raise_for_rpc(e, f"CreateProductStorageRequest({product_id}, {stock})")
+
+        return {
+            "product_id": resp.product_id,
+            "stock": resp.stock
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
