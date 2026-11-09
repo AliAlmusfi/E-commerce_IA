@@ -18,6 +18,7 @@ class RequestBuilder:
         self.response_status = None
         self.response_payload = {}
         self.duration_ms = None
+        return self
     
     def set_user_id(self, user_id: int)->"RequestBuilder":
         self.user_id = user_id
@@ -67,6 +68,8 @@ class RequestBuilder:
 
     @staticmethod
     def create_request_log(req:Request):
+        if req is None:
+            return
         with db_session.begin():
             db_session.add(req)
 

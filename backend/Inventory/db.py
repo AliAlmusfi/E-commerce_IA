@@ -37,5 +37,3 @@ class Model(Base):
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), 
         onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
-
-

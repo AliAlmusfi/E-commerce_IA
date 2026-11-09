@@ -47,19 +47,25 @@ migrate = Migrate(app, db_wrapper)
 
 
 # gRPC code
-def do_finally(request_builder:RequestBuilder, request_start_time:float):
+def do_finally(request_builder:RequestBuilder, request_start_time:float, context:grpc.RpcContext):
+    if request_builder is None:
+        db_session.remove()
+        return
     request_builder.set_duration_ms(int((time.perf_counter() - request_start_time) * 1000))
     request_log:Request = request_builder.get_result()
     try:
         RequestBuilder.create_request_log(request_log)
         request_builder.reset()
     except Exception as e:
-        exception(e)
+        print(f"app.do_finally:\n⚠️ Failed to save request log: {e}") 
+        # exception(e, context, request_builder)
     finally:
         db_session.remove()
 class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
     def GetProductStockById(self, request, context):
+        request_builder = None
         try:
+            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
             request_start_time = time.perf_counter()
             request_builder = (
                 RequestBuilder()
@@ -69,18 +75,19 @@ class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
                 .set_rpc_service(rpc_service)
             )
             
-            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
             
-            Validator.validate(rpc_service, request, context)
+            Validator.validate(rpc_service, request, context, request_builder)
             request_builder.set_user_id(request.user_id)
             
-            data:dict = get_product_stock_by_id(request=request, context=context) #controller method that gets the product data dict
+            data:dict = get_product_stock_by_id(request=request, context=context, request_builder=request_builder) #controller method that gets the product data dict
             return inventory_pb2.GetProductStockByIdResponse(**data)
         finally:
-            do_finally(request_builder, request_start_time)
+            do_finally(request_builder, request_start_time, context)
 
     def ReserveProduct(self, request, context):
+        request_builder = None
         try:
+            rpc_service = RPCServiceEnum.RESERVE_PRODUCT
             request_start_time = time.perf_counter()
             request_builder = (
                 RequestBuilder()
@@ -89,16 +96,17 @@ class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
                 )
                 .set_rpc_service(rpc_service)
             )
-            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
-            Validator.validate(rpc_service, request, context)
+            Validator.validate(rpc_service, request, context, request_builder)
             request_builder.set_user_id(request.user_id)
-            data:dict = reserve_product(request=request, context=context) #controller method that do reservation and gets the data dict
+            data:dict = reserve_product(request=request, context=context, request_builder=request_builder) #controller method that do reservation and gets the data dict
             return inventory_pb2.ReserveProductResponse(**data)
         finally:
-            do_finally(request_builder, request_start_time)
+            do_finally(request_builder, request_start_time, context)
 
     def ReserveOrder(self, request, context):
+        request_builder = None
         try:
+            rpc_service = RPCServiceEnum.RESERVE_ORDER
             request_start_time = time.perf_counter()
             request_builder = (
                 RequestBuilder()
@@ -107,16 +115,17 @@ class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
                 )
                 .set_rpc_service(rpc_service)
             )
-            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
-            Validator.validate(rpc_service, request, context)
+            Validator.validate(rpc_service, request, context, request_builder)
             request_builder.set_user_id(request.user_id)
-            data:dict = reserve_order(request=request, context=context)
+            data:dict = reserve_order(request=request, context=context, request_builder=request_builder)
             return inventory_pb2.ReserveOrderResponse(**data)
         finally:
-            do_finally(request_builder, request_start_time)
+            do_finally(request_builder, request_start_time, context)
 
     def UpdateProductQuantity(self, request, context):
+        request_builder = None
         try:
+            rpc_service = RPCServiceEnum.UPDATE_PRODUCT_QUANTITY
             request_start_time = time.perf_counter()
             request_builder = (
                 RequestBuilder()
@@ -125,16 +134,17 @@ class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
                 )
                 .set_rpc_service(rpc_service)
             )
-            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
-            Validator.validate(rpc_service, request, context)
+            Validator.validate(rpc_service, request, context, request_builder)
             request_builder.set_user_id(request.user_id)
-            data:dict = update_product_quantity(request=request, context=context)
+            data:dict = update_product_quantity(request=request, context=context, request_builder=request_builder)
             return inventory_pb2.UpdateProductQuantityResponse(**data)
         finally:
-            do_finally(request_builder, request_start_time)
+            do_finally(request_builder, request_start_time, context)
 
     def CreateProductStorage(self, request, context):
+        request_builder = None
         try:
+            rpc_service = RPCServiceEnum.Create_Product_Storage
             request_start_time = time.perf_counter()
             request_builder = (
                 RequestBuilder()
@@ -143,13 +153,13 @@ class InventoryServiceServicer(inventory_pb2_grpc.InventoryServiceServicer):
                 )
                 .set_rpc_service(rpc_service)
             )
-            rpc_service = RPCServiceEnum.GET_PRODUCT_Stock_BY_Id
-            Validator.validate(rpc_service, request, context)
+            Validator.validate(rpc_service, request, context, request_builder)
             request_builder.set_user_id(request.user_id)
-            data:dict = create_product_storage(request=request, context=context)
+            data:dict = create_product_storage(request=request, context=context, request_builder=request_builder)
             return inventory_pb2.CreateProductStorageResponse(**data)
         finally:
-            do_finally(request_builder, request_start_time)
+            do_finally(request_builder, request_start_time, context)
+
 
 
 
@@ -181,3 +191,5 @@ if __name__ == "__main__":
     finally:
         # Clean up gRPC server resources on shutdown
         grpc_server.stop(0)
+
+import command

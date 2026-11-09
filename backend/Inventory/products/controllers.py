@@ -1,4 +1,5 @@
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 import grpc
 
@@ -9,44 +10,54 @@ from .grpc_exceptions import product_not_found, field_must_be_positive, \
                             insufficient_stock, DB_INTEGRITY_ERROR, \
                             exception
 
+from requests_log.services import RequestBuilder
 
-def get_product_stock_by_id(request, context:grpc.ServicerContext)-> dict:
+
+def get_product_stock_by_id(request, context:grpc.ServicerContext, request_builder:RequestBuilder)-> dict:
     try:
         product = db_session.get(Product, request.product_id)
         if product is None:
             product_not_found(
                 request.product_id,
-                context
+                context,
+                request_builder
             )
         return {
-            "id":request.product_id,
+            "product_id":request.product_id,
             "stock":product.storage.stock
         }
+    except grpc.RpcError as rpc_e:
+        raise rpc_e
     except Exception as e:
-        exception(e)
+        if context.code() is not None:
+            raise e
+        exception(e, context, request_builder)
 
 
-def reserve_product(request, context:grpc.ServicerContext)-> dict:
+def reserve_product(request, context:grpc.ServicerContext, request_builder:RequestBuilder)-> dict:
     try:
         with db_session.begin():
             try:
                 product = (
                     db_session.query(Product)
                     .filter(Product.product_id == request.product_id)
+                    .options(joinedload(Product.storage))
                     .with_for_update()
                     .one()
                 )
             except NoResultFound:
                 product_not_found(
                     product_id=request.product_id,
-                    context=context
+                    context=context,
+                    request_builder=request_builder
                 )
             
             if product.storage.stock < request.quantity:
                 insufficient_stock(
                     stock=product.storage.stock,
                     quantity=request.quantity,
-                    context=context
+                    context=context,
+                    request_builder=request_builder
                 ),
             
             product.storage.stock -= request.quantity
@@ -57,17 +68,22 @@ def reserve_product(request, context:grpc.ServicerContext)-> dict:
                 "remaining_stock":remaining,
                 "msg":"Success",
             }
+    except grpc.RpcError as rpc_e:
+        raise rpc_e
     except Exception as e:
-        exception(e)
+        if context.code() is not None:
+            raise e
+        exception(e, context, request_builder)
     
 
-def reserve_order(request, context:grpc.ServicerContext)->dict:
+def reserve_order(request, context:grpc.ServicerContext, request_builder:RequestBuilder)->dict:
     try:
         for product in request.products:
             if product.quantity <= 0:
                 field_must_be_positive(
                     f'product {product.product_id}: quantity',
-                    context
+                    context,
+                    request_builder
                 )
 
         from collections import defaultdict
@@ -87,11 +103,12 @@ def reserve_order(request, context:grpc.ServicerContext)->dict:
                     current_product = (
                         db_session.query(Product)
                         .filter(Product.product_id == p_id)
+                        .options(joinedload(Product.storage))
                         .with_for_update()
                         .one()
                     )
                 except NoResultFound:
-                    product_not_found(p_id,context)
+                    product_not_found(p_id,context, request_builder)
                 
                 product_items.append({
                     "product": current_product,
@@ -102,46 +119,53 @@ def reserve_order(request, context:grpc.ServicerContext)->dict:
             for product_item in product_items:
                 product:Product = product_item["product"]
                 qty = product_item["quantity"]
-                if not (qty > product.storage.stock):
+                if (qty > product.storage.stock):
                     insufficient_stock(
                         stock=product.storage.stock,
                         quantity=qty,
-                        context=context
+                        context=context,
+                        request_builder=request_builder
                     )
                 
-                product.stock -= qty 
+                product.storage.stock -= qty 
                 
             return {
                 "success": True,
                 "msg":"Success",
-                "failed_products_ids":[]
+                "failed_product_ids":[]
             }
         return {
             "success": True,
             "msg":"Success",
-            "failed_products_ids":[]
+            "failed_product_ids":[]
         }
+    except grpc.RpcError as rpc_e:
+        raise rpc_e
     except Exception as e:
-        exception(e)
+        if context.code() is not None:
+            raise e
+        exception(e, context, request_builder)
 
 
-def update_product_quantity(request, context:grpc.ServicerContext)->dict:
+def update_product_quantity(request, context:grpc.ServicerContext, request_builder:RequestBuilder)->dict:
     try:
         with db_session.begin():
             try:
                 product = (
                     db_session.query(Product)
                     .filter(Product.product_id == request.product_id)
+                    .options(joinedload(Product.storage))
                     .with_for_update()
                     .one()
                 )
             except NoResultFound:
                 product_not_found(
                     product_id=request.product_id,
-                    context=context
+                    context=context,
+                    request_builder=request_builder
                 )
 
-            product.stock += request.quantity
+            product.storage.stock += request.amount
             
             return {
                 "success": True,
@@ -152,11 +176,15 @@ def update_product_quantity(request, context:grpc.ServicerContext)->dict:
             "success": False,
             "msg":"Failed while increasing stock"
         }
+    except grpc.RpcError as rpc_e:
+        raise rpc_e
     except Exception as e:
-        exception(e)
+        if context.code() is not None:
+            raise e
+        exception(e, context, request_builder)
     
     
-def create_product_storage(request, context:grpc.ServicerContext)->dict:
+def create_product_storage(request, context:grpc.ServicerContext, request_builder:RequestBuilder)->dict:
     try:
         product = Product(product_id=request.product_id)
         storage = Storage(stock=request.stock)
@@ -167,7 +195,8 @@ def create_product_storage(request, context:grpc.ServicerContext)->dict:
             except IntegrityError as ie:
                 DB_INTEGRITY_ERROR(
                     ie.__str__(),
-                    context
+                    context,
+                    request_builder
                 )
 
             return {
@@ -179,6 +208,11 @@ def create_product_storage(request, context:grpc.ServicerContext)->dict:
             "product_id": None,
             "stock": None
         }
+    except grpc.RpcError as rpc_e:
+        raise rpc_e
     except Exception as e:
-        exception(e)
+        if context.code() is not None:
+            raise e
+        exception(e, context, request_builder)
     
+
