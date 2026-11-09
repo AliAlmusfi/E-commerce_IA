@@ -13,14 +13,13 @@ from user.public import get_users_map
 
 
 
+from drf_spectacular.utils import extend_schema , extend_schema_view
 
-
-from drf_spectacular.utils import extend_schema
-
-from .models import Orders, OrderItems
+from .models import Order, OrderItem
 from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerializer, OrderStatusUpdateSerializer
 
-from ..tools.grpc.client import InventoryServiceError
+from tools.grpc.client import InventoryServiceError
+
 
 
 class IsOwnerOrStaff(permissions.BasePermission):
@@ -29,6 +28,10 @@ class IsOwnerOrStaff(permissions.BasePermission):
         return request.user.is_staff or obj.user_id == request.user.id
 
 
+@extend_schema_view(
+    list=extend_schema(tags=["Order"]),
+    retrieve = extend_schema(tags=["Order"])
+)
 class OrderViewSet(viewsets.ModelViewSet):
     """
     Full CRUD viewset, with `update` / `partial_update` disabled on purpose.
@@ -44,20 +47,22 @@ class OrderViewSet(viewsets.ModelViewSet):
     # search_fields     = ["id", "items__product_title"]
 
     def get_permissions(self):
-        if self.action == 'list_all' or self.action == 'retrieve_one':
+        if self.action == "update_status" :#or self.action == 'list_all' or self.action == 'retrieve_one'  :
             self.permission_classes.append(IsAdminUser)
-        if self.action == 'create':
+        else:
             self.permission_classes = [IsAuthenticated]
+            
 
+        # return [permission() for permission in permission_classes]
         return super().get_permissions()
 
     def get_queryset(self):
         user = self.request.user
         qs = (
-            Orders.objects
+            Order.objects
             # .select_related("user")
             .prefetch_related(
-                Prefetch("items", queryset=OrderItems.objects.order_by("created_at"))
+                Prefetch("items", queryset=OrderItem.objects.order_by("created_at"))
             )
         )
         # avoid duplicate rows from search on reverse relation
@@ -65,7 +70,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             qs = qs.distinct()
         if user.is_staff:
             return qs
-        return qs.filter(user=user)
+        return qs.filter(user_id=user.id)
 
     # ─── serializer routing ────────────────────────────────────
     def get_serializer_class(self):
@@ -93,12 +98,25 @@ class OrderViewSet(viewsets.ModelViewSet):
             # 2. Call the User Facade (ONE query to the user database)
             context['user_map'] = get_users_map(user_ids)
 
+
+            # # 2. Fetch Product Map (ONE query)
+            # # Extract all unique product IDs from all items in all orders on this page
+            # product_ids = set()
+            # for order in orders:
+            #     for item in order.items.all():
+            #         product_ids.add(item.product_id)
+            
+            # context['product_map'] = get_products_map(list(product_ids))
+
+        return context
+
     # ─── create ────────────────────────────────────────────────
 
 
 
-
-
+    @extend_schema(
+        tags=["Order"],
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -148,6 +166,10 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
     # ─── extra action: PATCH /orders/{id}/status/ ──────────────
+    
+    @extend_schema(
+        tags=["Order"],
+    )
     @action(detail=True, methods=["patch"], url_path="status")
     def update_status(self, request, pk=None):
         order = self.get_object()
@@ -162,29 +184,29 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
             return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
+        # serializer.save()
         return Response(OrderSerializer(updated_status, context=self.get_serializer_context()).data)
 
 
  
     # ─── Admin ────────────────────────────────────────────────
 
-    @extend_schema(
-        summary="List All Orders",
-        operation_id="list_all",
-        description="List all Orders to the admin",
-        tags=["Order/Admin"],
-    )
-    @action(detail=False, methods=["GET"], url_path="list_all")
-    def list_all(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+    # @extend_schema(
+    #     summary="List All Orders",
+    #     operation_id="list_all",
+    #     description="List all Orders to the admin",
+    #     tags=["Order/Admin"],
+    # )
+    # @action(detail=False, methods=["GET"], url_path="list_all")
+    # def list_all(self, request, *args, **kwargs):
+    #     return super().list(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Retrieve one Order",
-        operation_id="retrieve_one",
-        description="retrieve one Order to the admin",
-        tags=["Order/Admin"],
-    )
-    @action(detail=True, methods=["GET"], url_path="retrieve_one")
-    def retrieve_one(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+    # @extend_schema(
+    #     summary="Retrieve one Order",
+    #     operation_id="retrieve_one",
+    #     description="retrieve one Order to the admin",
+    #     tags=["Order/Admin"],
+    # )
+    # @action(detail=True, methods=["GET"], url_path="retrieve_one")
+    # def retrieve_one(self, request, *args, **kwargs):
+    #     return super().retrieve(request, *args, **kwargs)

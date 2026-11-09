@@ -5,9 +5,9 @@ from e_commerce import settings
 
 
 
-class Orders (TimeStampedModel):
+class Order (TimeStampedModel):
     class Meta:
-        db_table = 'order'
+        db_table = 'orders'
 
     total  = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     # product_quantity = models.IntegerField(null=False, blank=False)
@@ -33,8 +33,8 @@ class Orders (TimeStampedModel):
 
 
 
-class OrderItems(TimeStampedModel):
-    order = models.ForeignKey(Orders, on_delete=models.CASCADE, related_name="items")
+class OrderItem(TimeStampedModel):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     product_id = models.PositiveBigIntegerField(db_index=True)
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)

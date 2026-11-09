@@ -1,4 +1,4 @@
-from .models import Orders , OrderItems
+from .models import Order , OrderItem
 from tools.grpc.client import InventoryClient
 from django.core.exceptions import ValidationError , PermissionDenied
 from django.db import transaction
@@ -6,7 +6,7 @@ from decimal import Decimal
 
 
 
-def create_order(user, items_data: list[dict]) -> Orders:
+def create_order(user, items_data: list[dict]) -> Order:
 
     client = InventoryClient()
     products = {}
@@ -35,14 +35,14 @@ def create_order(user, items_data: list[dict]) -> Orders:
 
     try:
         with transaction.atomic():
-            order = Orders.objects.create(user_id = user.id)
+            order = Order.objects.create(user_id = user.id)
             total = Decimal("0.00")
 
             for item in items_data:
                 pid = products["product_id"]
         #TODO   unit_price =  add this from the public.py from the product 
                 qty = item["quantity"]
-                OrderItems.objects.create(
+                OrderItem.objects.create(
                     order=order,
                     product_id=item["product_id"],
                     # product_title=product["title"],             # snapshot
@@ -95,15 +95,15 @@ def _release_reserved(client, items_data , user):
 
 
 
-def update_order_status(user , order:Orders , new_status: str) ->Orders:
+def update_order_status(user , order:Order , new_status: str) ->Order:
     if not user.is_staff: 
         raise PermissionDenied(
             {"detail": "Only staff can change order status "},
         )
 
     ALLOWED_TRANSITIONS = {
-        Orders.Status.PENDING:  {Orders.Status.COMPLETE},
-        Orders.Status.COMPLETE: set(),    # terminal
+        Order.Status.PENDING:  {Order.Status.COMPLETE},
+        Order.Status.COMPLETE: set(),    # terminal
     }
 
     current_status = order.status

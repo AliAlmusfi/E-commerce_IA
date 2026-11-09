@@ -5,14 +5,14 @@ from typing import Optional, Iterable
 from django.conf import settings
 
 # ✅ Updated imports based on your new generated code
-from backend.src.tools.grpc.inventory_pb2 import (
+from .inventory_pb2 import (
     GetProductStockByIdRequest,
     ReserveProductRequest,
     ReserveOrderRequest,
     ReserveOrderItem,
     UpdateProductQuantityRequest,
 )
-from backend.src.tools.grpc.inventory_pb2_grpc import InventoryServiceStub
+from .inventory_pb2_grpc import InventoryServiceStub
 
 
 class InventoryServiceError(Exception):

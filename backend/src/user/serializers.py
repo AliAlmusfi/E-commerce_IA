@@ -2,11 +2,11 @@ from rest_framework import serializers
 from django.db import transaction
 
 
-from .models import Users
+from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Users 
+        model = User 
         fields = [
             'id',
             'username',
@@ -20,7 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Users 
+        model = User 
         fields = [
             'id',
             'username',
@@ -40,7 +40,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     
 
     class Meta:
-        model = Users
+        model = User
         fields = ['username', 'email' , 'password']
         extra_kwargs = {
             'username': {'required': True},
