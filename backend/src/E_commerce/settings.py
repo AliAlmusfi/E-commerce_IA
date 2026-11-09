@@ -203,3 +203,10 @@ FIREBASE_POST_REQUEST_URL = os.getenv('FIREBASE_POST_REQUEST_URL')
 PRODUCT_SERVICE_GRPC_HOST = os.getenv('PRODUCT_SERVICE_GRPC_HOST' , '')
 INVENTORY_GRPC_HOST = os.getenv('INVENTORY_GRPC_HOST' , '')
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
+    'DEFAULT_VERSION': 'v1',  # Default version if none is specified
+    'ALLOWED_VERSIONS': ['v1', 'v2'], # List all supported versions
+    'VERSION_PARAM': 'version',
+}

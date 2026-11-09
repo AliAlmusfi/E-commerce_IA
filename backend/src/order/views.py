@@ -6,6 +6,10 @@ from rest_framework.response import Response
 # from rest_framework.filters import OrderingFilter, SearchFilter
 # from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
+from .services import create_order , update_order_status
+from django.core.exceptions import ValidationError , PermissionDenied
+
+from user.public import get_users_map
 
 
 
@@ -13,10 +17,10 @@ from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
 
 from drf_spectacular.utils import extend_schema
 
-from .models import Order, OrderItem
+from .models import Orders, OrderItems
 from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerializer, OrderStatusUpdateSerializer
 
-from .grpc.client import InventoryServiceError
+from ..tools.grpc.client import InventoryServiceError
 
 
 class IsOwnerOrStaff(permissions.BasePermission):
@@ -50,10 +54,10 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = (
-            Order.objects
-            .select_related("user")
+            Orders.objects
+            # .select_related("user")
             .prefetch_related(
-                Prefetch("items", queryset=OrderItem.objects.order_by("created_at"))
+                Prefetch("items", queryset=OrderItems.objects.order_by("created_at"))
             )
         )
         # avoid duplicate rows from search on reverse relation
@@ -73,6 +77,22 @@ class OrderViewSet(viewsets.ModelViewSet):
             return OrderStatusUpdateSerializer
         return OrderSerializer
 
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        
+        # Only fetch users for list/retrieve (READ operations)
+        if self.action in ['list', 'retrieve']:
+            queryset = self.filter_queryset(self.get_queryset())
+            page = self.paginate_queryset(queryset)
+            orders = page if page is not None else queryset
+            
+            # 1. Extract unique user IDs from the orders
+            user_ids = list(set(order.user_id for order in orders))
+            
+            # 2. Call the User Facade (ONE query to the user database)
+            context['user_map'] = get_users_map(user_ids)
+
     # ─── create ────────────────────────────────────────────────
 
 
@@ -84,7 +104,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            order = serializer.save()
+            order = create_order(user = request.user , items_data=serializer.validated_data["items"])
         except InventoryServiceError as exc:
             return Response(
                 {
@@ -93,6 +113,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+        except ValidationError as exc:
+            
+            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
 
         out = OrderSerializer(order, context=self.get_serializer_context())
         return Response(out.data, status=status.HTTP_201_CREATED)
@@ -117,17 +140,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     @extend_schema(exclude=True)
 
     def destroy(self, request, *args, **kwargs):
-        # order = self.get_object()
 
-        # if order.status not in (Order.Status.PENDING, Order.Status.PAID):
-        #     return Response(
-        #         {"detail": f"Cannot cancel an order in status '{order.status}'."},
-        #         status=status.HTTP_409_CONFLICT,
-        #     )
-
-        # order.status = Order.Status.CANCELLED
-        # order.save(update_fields=["status", "updated_at"])
-        # return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
             {"detail": "Orders cannot be deleted"},
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
@@ -139,16 +152,18 @@ class OrderViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         order = self.get_object()
 
-        if not request.user.is_staff: #and request.data.get("status") != Order.Status.CANCELLED:
-            return Response(
-                {"detail": "Only staff can change order status (except to cancel)."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+
 
         serializer = self.get_serializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        try:
+            updated_status = update_order_status(user = request.user ,order = order , new_status=serializer.validated_data['status'] )
+        except PermissionDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except ValidationError as e:
+            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
-        return Response(OrderSerializer(order, context=self.get_serializer_context()).data)
+        return Response(OrderSerializer(updated_status, context=self.get_serializer_context()).data)
 
 
  
