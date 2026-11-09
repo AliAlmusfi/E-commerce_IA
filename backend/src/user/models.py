@@ -25,7 +25,7 @@ class CustomUserManager(BaseUserManager):
 
 
 
-class User(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
+class Users(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
     class Meta:
         db_table = 'user'
     username = models.CharField(max_length=100 , unique=True)

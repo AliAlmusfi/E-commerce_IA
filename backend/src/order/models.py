@@ -5,7 +5,7 @@ from e_commerce import settings
 
 
 
-class Order (TimeStampedModel):
+class Orders (TimeStampedModel):
     class Meta:
         db_table = 'order'
 
@@ -23,16 +23,18 @@ class Order (TimeStampedModel):
         blank=False
     )
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,   
-        related_name='orders',
-    )
+    user_id = models.PositiveBigIntegerField(db_index=True)
+    
+    # user = models.ForeignKey(
+    #     settings.AUTH_USER_MODEL,
+    #     on_delete=models.PROTECT,   
+    #     related_name='orders',
+    # )
 
 
 
-class OrderItem(TimeStampedModel):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+class OrderItems(TimeStampedModel):
+    order = models.ForeignKey(Orders, on_delete=models.CASCADE, related_name="items")
     product_id = models.PositiveBigIntegerField(db_index=True)
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)

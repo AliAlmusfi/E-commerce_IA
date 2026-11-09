@@ -2,11 +2,11 @@ from rest_framework import serializers
 from django.db import transaction
 
 
-from .models import User
+from .models import Users
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User 
+        model = Users 
         fields = [
             'id',
             'username',
@@ -20,7 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User 
+        model = Users 
         fields = [
             'id',
             'username',
@@ -40,7 +40,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     
 
     class Meta:
-        model = User
+        model = Users
         fields = ['username', 'email' , 'password']
         extra_kwargs = {
             'username': {'required': True},
@@ -65,17 +65,5 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def create(self, validated_data):
-        try:
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    username = validated_data['username'],
-                    email = validated_data['email'],
-                    password = validated_data['password'],
-                )
 
-            return user
-        except KeyError as e:
-            raise serializers.ValidationError(f'{str(e)}: this field is required !')
-    
 
