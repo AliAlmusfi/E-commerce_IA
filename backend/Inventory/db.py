@@ -13,7 +13,7 @@ def init_db():
     # import all modules here that might define models so that
     # they will be registered properly on the metadata.  Otherwise
     # you will have to import them first before calling init_db()
-    from db_models import Product
+    from db_models import Product, Storage
     Base.metadata.create_all(bind=engine)
 
 
@@ -37,5 +37,3 @@ class Model(Base):
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), 
         onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
-
-

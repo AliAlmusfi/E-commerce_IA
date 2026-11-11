@@ -19,6 +19,10 @@ from django.urls import path , include
 from drf_spectacular.utils import extend_schema , extend_schema_view
 from rest_framework_simplejwt.views import TokenObtainPairView , TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from django.conf import settings
+from django.conf.urls.static import static
+
+
 
 from django.conf.urls.static import static
 from django.conf import settings
@@ -39,8 +43,8 @@ api_patterns = [
             }
         ))(TokenObtainPairView.as_view()) , name='token_obtain_pair'),
     path('users/token/refresh/' , extend_schema_view(post=extend_schema(tags=['Users/Auth'], summary="Refresh Token"))(TokenRefreshView.as_view()) , name='token_refresh'),
-    path('' , include('user.urls') ),
-    path('' , include('order.urls') ),
+    path('v1/' , include('user.urls.v1') ),
+    path('v1/' , include('order.urls.v1') ),
     path('' , include('product.urls') ),
     
 ]
@@ -53,6 +57,7 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

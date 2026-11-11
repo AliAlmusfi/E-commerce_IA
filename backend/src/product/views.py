@@ -4,12 +4,19 @@ from rest_framework.decorators import action
 from rest_framework import status 
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
+from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 
 from drf_spectacular.utils import extend_schema
 
 from .models import Product
-from .serializers import ProductSerializer
+from .serializers import ProductSerializer, ProductUpdateSerializer, ProductStockSerializer
+from .filters import ProductFilter , ProductSearchFilter
+from .services import create_product, patch_product, update_stock as update_stk
 
+from tools.exceptions import exception_response, grpc_exception_response
+from tools.grpc.client import InventoryServiceError
 
 # Create your views here.
 
@@ -17,9 +24,23 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
+    pagination_class = PageNumberPagination
+    pagination_class.page_size=50
+    pagination_class.max_page_size=120
+    pagination_class.page_size_query_param='size'
+    # filtering/searching/ordering
+    filter_backends = [
+        DjangoFilterBackend,
+        ProductSearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = ProductFilter
+    search_fields = ['title', 'manufacture']
+    ordering_fields = ['title', 'manufacture', 'created_at', 'updated_at']
+
     def get_permissions(self):
         self.permission_classes = [IsAuthenticated]
-        if self.action == 'create' or self.action == 'update' or self.action == 'partial_update':
+        if self.action == 'create' or self.action == 'update' or self.action == 'partial_update' or self.action == 'update_stock':
             self.permission_classes.append(IsAdminUser)
         return super().get_permissions()
 
@@ -37,7 +58,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'manufacture': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                     'stock': {'type': 'integer' , 'example': 20},
-                    'image': {'type': 'string', 'format': 'binary'}
+                    'image': {'type': 'string' , 'format': 'binary'},
+
                 },
                 'required': ['title' , 'manufacture' , 'price' , 'stock']
             },
@@ -49,7 +71,6 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'manufacture': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                     'stock': {'type': 'integer' , 'example': 20},
-                    'image': {'type': 'string', 'format': 'binary'}
                 },
                 'required': ['title' , 'manufacture' , 'price' , 'stock']
 
@@ -57,53 +78,22 @@ class ProductViewSet(viewsets.ModelViewSet):
         }           
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            try:
+                product = create_product(request.user.id, serializer.validated_data)
+            except InventoryServiceError as e:
+                return grpc_exception_response(e)
 
-    @extend_schema(
-        summary="Delete",
-        operation_id="delete",
-        description="delete Product by admin",
-        tags=["Product"],
-    )
-    def destroy(self, request, *args, **kwargs):
-        return super().destroy(request, *args, **kwargs)
+            product_data = self.get_serializer(product)
+            return Response(
+                product_data,
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            return exception_response(e)
 
-
-    @extend_schema(
-        summary="Update",
-        operation_id="update",
-        description="Update Product by admin",
-        tags=["Product"],
-        request={
-            'multipart/form-data': {
-                'type': 'object',
-                'properties': {
-                    'title': {'type': 'string', 'example': 'Giant x7 ir'},
-                    'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
-                    'price': {'type': 'integer' , 'example': 200},
-                    'stock': {'type': 'integer' , 'example': 20}
-                },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
-            },
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'title': {'type': 'string', 'example': 'Giant x7 ir'},
-                    'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
-                    'price': {'type': 'integer' , 'example': 200},
-                    'stock': {'type': 'integer' , 'example': 20}
-                },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
-
-            },
-        }         
-    )
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
-
-    
     @extend_schema(
         summary="Partial Update",
         operation_id="partial_update",
@@ -117,9 +107,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
                     'manufacture': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
-                    'stock': {'type': 'integer' , 'example': 20}
-                },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
+                    'image': {'type': 'string' , 'format': 'binary'},
+                }
             },
             'application/json': {
                 'type': 'object',
@@ -128,16 +117,59 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
                     'manufacture': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
-                    'stock': {'type': 'integer' , 'example': 20}
-                },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
-
+                }
             },
         }         
     )
-    def partial_update(self, request, *args, **kwargs):
-        return super().partial_update(request, *args, **kwargs)
+    @action(serializer_class = ProductUpdateSerializer)
+    def partial_update(self, request, pk, *args, **kwargs):
+        try:
+            serializer = ProductUpdateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            try:
+                product = patch_product(pk, request.user.id, serializer.validated_data)
+            except InventoryServiceError as e:
+                return grpc_exception_response(e)
 
+            product_data = self.get_serializer(product)
+            return Response(
+                product_data,
+                status=status.HTTP_202_ACCEPTED
+            )
+        except Exception as e:
+            return exception_response(e)
+
+    @extend_schema(
+        summary="Update Stock",
+        operation_id="update_stock",
+        description="update product stock",
+        tags=["Product"],
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'stock': {'type': 'integer' , 'example': 20}
+                },
+                'required': ['stock']
+            },
+        }        
+    )
+    @action(detail=True, methods=["PATCH"])
+    def update_stock(self, request, pk, *args, **kwargs):
+        try:
+            serializer = ProductStockSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            try:
+                updated = update_stk(pk, request.user.id, serializer.validated_data['amount'])
+            except InventoryServiceError as e:
+                return grpc_exception_response(e)
+
+            return Response(
+                {'success': updated}, # TODO: Error Unification
+                status=status.HTTP_202_ACCEPTED
+            )
+        except Exception as e:
+            return exception_response(e)
     
     @extend_schema(
         summary="List",
@@ -156,3 +188,56 @@ class ProductViewSet(viewsets.ModelViewSet):
     ) 
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
+
+
+    @extend_schema(
+        summary="Delete",
+        operation_id="delete",
+        description="delete Product by admin",
+        tags=["Product"],
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+
+    @extend_schema(
+        exclude=True,
+        summary="Update",
+        operation_id="update",
+        description="Update Product by admin",
+        tags=["Product"],
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'title': {'type': 'string', 'example': 'Giant x7 ir'},
+                    'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
+                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'price': {'type': 'integer' , 'example': 200},
+                    'stock': {'type': 'integer' , 'example': 20},
+                    'image': {'type': 'string' , 'format': 'binary'},
+
+                },
+                'required': ['title' , 'manufacture' , 'price' , 'stock']
+            },
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'title': {'type': 'string', 'example': 'Giant x7 ir'},
+                    'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
+                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'price': {'type': 'integer' , 'example': 200},
+                    'stock': {'type': 'integer' , 'example': 20},
+
+                },
+                'required': ['title' , 'manufacture' , 'price' , 'stock']
+
+            },
+        }         
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+
+
+

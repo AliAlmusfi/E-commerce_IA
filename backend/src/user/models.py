@@ -27,7 +27,7 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
     class Meta:
-        db_table = 'user'
+        db_table = 'users'
     username = models.CharField(max_length=100 , unique=True)
     email = models.EmailField(unique=True)
     objects = CustomUserManager()

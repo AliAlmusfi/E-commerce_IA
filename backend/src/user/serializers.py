@@ -65,17 +65,5 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def create(self, validated_data):
-        try:
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    username = validated_data['username'],
-                    email = validated_data['email'],
-                    password = validated_data['password'],
-                )
 
-            return user
-        except KeyError as e:
-            raise serializers.ValidationError(f'{str(e)}: this field is required !')
-    
 
