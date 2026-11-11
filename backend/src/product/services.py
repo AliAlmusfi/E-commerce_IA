@@ -1,6 +1,8 @@
 from .models import Product
 
-from tools.grpc.client import InventoryClient, InventoryServiceError
+from tools.grpc.client import InventoryClient #, InventoryServiceError
+from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
+
 
 
 def create_product(user_id, data:dict)->Product:
@@ -27,7 +29,7 @@ def create_product(user_id, data:dict)->Product:
 
     if not response['product_id']:
         delete_product(product.id)
-        raise Exception("can't create product storage (but can create product with no storage)!")
+        raise BusinessRuleViolation("can't create product storage (but can create product with no storage)!")
 
     return product
 
@@ -37,7 +39,7 @@ def delete_product(id:int):
 def patch_product(id, user_id, data:dict)->Product:
     product = Product.objects.get(id)
     if product is None:
-        raise Exception(f"product {id} is not found!")
+        raise BusinessRuleViolation(f"Product {id} is not found!", code="NOT_FOUND", status_code=404)
 
     if data['title']:
         product.title = data['title']

@@ -6,6 +6,8 @@ from rest_framework.response import Response
 # from rest_framework.filters import OrderingFilter, SearchFilter
 # from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
+from rest_framework.throttling import UserRateThrottle , ScopedRateThrottle 
+
 from .services import create_order , update_order_status
 from django.core.exceptions import ValidationError , PermissionDenied
 
@@ -19,6 +21,8 @@ from .models import Order, OrderItem
 from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerializer, OrderStatusUpdateSerializer
 
 from tools.grpc.client import InventoryServiceError
+
+from product.public import get_products_map
 
 
 
@@ -38,6 +42,12 @@ class OrderViewSet(viewsets.ModelViewSet):
     Status changes go through the dedicated @action `update_status`.
     """
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrStaff]
+
+    throttle_classes = [UserRateThrottle]
+
+    #for more control on it if I want 
+    # throttle_classes = [ScopedRateThrottle]
+    # throttle_scope = "order_create"
 
     # ─── queryset & filtering ──────────────────────────────────
     # filter_backends   = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -99,14 +109,14 @@ class OrderViewSet(viewsets.ModelViewSet):
             context['user_map'] = get_users_map(user_ids)
 
 
-            # # 2. Fetch Product Map (ONE query)
-            # # Extract all unique product IDs from all items in all orders on this page
-            # product_ids = set()
-            # for order in orders:
-            #     for item in order.items.all():
-            #         product_ids.add(item.product_id)
+            # 2. Fetch Product Map (ONE query)
+            # Extract all unique product IDs from all items in all orders on this page
+            product_ids = set()
+            for order in orders:
+                for item in order.items.all():
+                    product_ids.add(item.product_id)
             
-            # context['product_map'] = get_products_map(list(product_ids))
+            context['product_map'] = get_products_map(list(product_ids))
 
         return context
 
@@ -121,19 +131,19 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            order = create_order(user = request.user , items_data=serializer.validated_data["items"])
-        except InventoryServiceError as exc:
-            return Response(
-                {
-                    "detail": "Inventory service unavailable. Try again shortly.",
-                    "error":  str(exc),
-                },
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-        except ValidationError as exc:
+        # try:
+        order = create_order(user = request.user , items_data=serializer.validated_data["items"])
+        # except InventoryServiceError as exc:
+        #     return Response(
+        #         {
+        #             "detail": "Inventory service unavailable. Try again shortly.",
+        #             "error":  str(exc),
+        #         },
+        #         status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        #     )
+        # except ValidationError as exc:
             
-            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        #     return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
 
         out = OrderSerializer(order, context=self.get_serializer_context())
         return Response(out.data, status=status.HTTP_201_CREATED)
@@ -178,13 +188,13 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        try:
-            updated_status = update_order_status(user = request.user ,order = order , new_status=serializer.validated_data['status'] )
-        except PermissionDenied as e:
-            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
-        except ValidationError as e:
-            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        # serializer.save()
+        # try:
+        updated_status = update_order_status(user = request.user ,order = order , new_status=serializer.validated_data['status'] )
+        # except PermissionDenied as e:
+        #     return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        # except ValidationError as e:
+        #     return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        # # serializer.save()
         return Response(OrderSerializer(updated_status, context=self.get_serializer_context()).data)
 
 

@@ -35,8 +35,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         filters.OrderingFilter,
     ]
     filterset_class = ProductFilter
-    search_fields = ['title', 'manufacture']
-    ordering_fields = ['title', 'manufacture', 'created_at', 'updated_at']
+    search_fields = ['title', 'manufacturer']
+    ordering_fields = ['title', 'manufacturer', 'created_at', 'updated_at']
 
     def get_permissions(self):
         self.permission_classes = [IsAuthenticated]
@@ -55,44 +55,44 @@ class ProductViewSet(viewsets.ModelViewSet):
                 'properties': {
                     'title': {'type': 'string', 'example': 'Giant x7 ir'},
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'manufacturer': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                     'stock': {'type': 'integer' , 'example': 20},
                     'image': {'type': 'string' , 'format': 'binary'},
 
                 },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
+                'required': ['title' , 'manufacturer' , 'price' , 'stock']
             },
             'application/json': {
                 'type': 'object',
                 'properties': {
                     'title': {'type': 'string', 'example': 'Giant x7 ir'},
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'manufacturer': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                     'stock': {'type': 'integer' , 'example': 20},
                 },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
+                'required': ['title' , 'manufacturer' , 'price' , 'stock']
 
             },
         }           
     )
     def create(self, request, *args, **kwargs):
-        try:
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            try:
-                product = create_product(request.user.id, serializer.validated_data)
-            except InventoryServiceError as e:
-                return grpc_exception_response(e)
+        # try:
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # try:
+        product = create_product(request.user.id, serializer.validated_data)
+        # except InventoryServiceError as e:
+        #     return grpc_exception_response(e)
 
-            product_data = self.get_serializer(product)
-            return Response(
-                product_data,
-                status=status.HTTP_201_CREATED
-            )
-        except Exception as e:
-            return exception_response(e)
+        product_data = self.get_serializer(product)
+        return Response(
+            product_data,
+            status=status.HTTP_201_CREATED
+        )
+        # except Exception as e:
+        #     return exception_response(e)
 
     @extend_schema(
         summary="Partial Update",
@@ -105,7 +105,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 'properties': {
                     'title': {'type': 'string', 'example': 'Giant x7 ir'},
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'manufacturer': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                     'image': {'type': 'string' , 'format': 'binary'},
                 }
@@ -115,29 +115,29 @@ class ProductViewSet(viewsets.ModelViewSet):
                 'properties': {
                     'title': {'type': 'string', 'example': 'Giant x7 ir'},
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'manufacturer': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                 }
             },
         }         
     )
-    @action(serializer_class = ProductUpdateSerializer)
+    # @action(serializer_class = ProductUpdateSerializer)
     def partial_update(self, request, pk, *args, **kwargs):
-        try:
-            serializer = ProductUpdateSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            try:
-                product = patch_product(pk, request.user.id, serializer.validated_data)
-            except InventoryServiceError as e:
-                return grpc_exception_response(e)
+        # try:
+        serializer = ProductUpdateSerializer(data=request.data , partial = True)
+        serializer.is_valid(raise_exception=True)
+        # try:
+        product = patch_product(pk, request.user.id, serializer.validated_data)
+        # except InventoryServiceError as e:
+        #     return grpc_exception_response(e)
 
-            product_data = self.get_serializer(product)
-            return Response(
-                product_data,
-                status=status.HTTP_202_ACCEPTED
-            )
-        except Exception as e:
-            return exception_response(e)
+        product_data = self.get_serializer(product)
+        return Response(
+            product_data,
+            status=status.HTTP_202_ACCEPTED
+        )
+        # except Exception as e:
+        #     return exception_response(e)
 
     @extend_schema(
         summary="Update Stock",
@@ -156,20 +156,20 @@ class ProductViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["PATCH"])
     def update_stock(self, request, pk, *args, **kwargs):
-        try:
-            serializer = ProductStockSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            try:
-                updated = update_stk(pk, request.user.id, serializer.validated_data['amount'])
-            except InventoryServiceError as e:
-                return grpc_exception_response(e)
+        # try:
+        serializer = ProductStockSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+            # try:
+        updated = update_stk(pk, request.user.id, serializer.validated_data['amount'])
+            # except InventoryServiceError as e:
+            #     return grpc_exception_response(e)
 
-            return Response(
-                {'success': updated}, # TODO: Error Unification
-                status=status.HTTP_202_ACCEPTED
-            )
-        except Exception as e:
-            return exception_response(e)
+        return Response(
+            {'success': updated}, # TODO: Error Unification
+            status=status.HTTP_202_ACCEPTED
+        )
+        # except Exception as e:
+        #     return exception_response(e)
     
     @extend_schema(
         summary="List",
@@ -212,25 +212,25 @@ class ProductViewSet(viewsets.ModelViewSet):
                 'properties': {
                     'title': {'type': 'string', 'example': 'Giant x7 ir'},
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'manufacturer': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                     'stock': {'type': 'integer' , 'example': 20},
                     'image': {'type': 'string' , 'format': 'binary'},
 
                 },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
+                'required': ['title' , 'manufacturer' , 'price' , 'stock']
             },
             'application/json': {
                 'type': 'object',
                 'properties': {
                     'title': {'type': 'string', 'example': 'Giant x7 ir'},
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
-                    'manufacture': {'type': 'string' , 'example': 'Giant '},
+                    'manufacturer': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
                     'stock': {'type': 'integer' , 'example': 20},
 
                 },
-                'required': ['title' , 'manufacture' , 'price' , 'stock']
+                'required': ['title' , 'manufacturer' , 'price' , 'stock']
 
             },
         }         
