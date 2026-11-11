@@ -9,7 +9,7 @@ class ProductFilter(django_filters.FilterSet):
         model= Product
         fields = {
             'title': ['exact' , 'iexact' , 'icontains', 'contains'],
-            'manufacture': ['exact' , 'iexact' , 'icontains' , 'contains'],
+            'manufacturer': ['exact' , 'iexact' , 'icontains' , 'contains'],
             'created_at': ['exact' , 'lt' , 'gt' , 'range'],
             'updated_at': ['exact' , 'lt' , 'gt' , 'range'],
         }

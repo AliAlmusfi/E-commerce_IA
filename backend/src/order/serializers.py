@@ -10,41 +10,41 @@ from .models import Order, OrderItem
 
 class OrderItemSerializer(serializers.ModelSerializer):
     subtotal = serializers.SerializerMethodField()
-    # product_title = serializers.SerializerMethodField()
-    # product_manufacturer = serializers.SerializerMethodField()
-    # product_image = serializers.SerializerMethodField()
-    # product_description = serializers.SerializerMethodField()
+    product_title = serializers.SerializerMethodField()
+    product_manufacturer = serializers.SerializerMethodField()
+    product_image = serializers.SerializerMethodField()
+    product_description = serializers.SerializerMethodField()
     
     class Meta:
         model  = OrderItem
         fields = [
             "id", "product_id", "quantity", "unit_price", "subtotal",
-            # "product_title", "product_manufacturer",  "product_image", "product_description"
+            "product_title", "product_manufacturer",  "product_image", "product_description"
         ]
         read_only_fields = fields
 
     def get_subtotal(self, obj):
         return obj.quantity * obj.unit_price
 
-    # def get_product_title(self, obj) -> str:
-    #     product_map = self.context.get('product_map', {})
-    #     product = product_map.get(obj.product_id)
-    #     return product.get("title") if product else "Unknown Product"
+    def get_product_title(self, obj) -> str:
+        product_map = self.context.get('product_map', {})
+        product = product_map.get(obj.product_id)
+        return product.get("title") if product else "Unknown Product"
 
-    # def get_product_image(self, obj) -> str:
-    #     product_map = self.context.get('product_map', {})
-    #     product = product_map.get(obj.product_id) 
-    #     return product.get("image") if product else ""
+    def get_product_image(self, obj) -> str:
+        product_map = self.context.get('product_map', {})
+        product = product_map.get(obj.product_id) 
+        return product.get("image") if product else ""
 
-    # def get_product_manufacturer(self, obj) -> str:
-    #     product_map = self.context.get('product_map', {})
-    #     product = product_map.get(obj.product_id)
-    #     return product.get("manufacturer") if product else ""
+    def get_product_manufacturer(self, obj) -> str:
+        product_map = self.context.get('product_map', {})
+        product = product_map.get(obj.product_id)
+        return product.get("manufacturer") if product else ""
     
-    # def get_product_manufacturer(self, obj) -> str:
-    #     product_map = self.context.get('product_map', {})
-    #     product = product_map.get(obj.product_id)
-    #     return product.get("description") if product else ""
+    def get_product_description(self, obj) -> str:
+        product_map = self.context.get('product_map', {})
+        product = product_map.get(obj.product_id)
+        return product.get("description") if product else ""
     
 
 class OrderSerializer(serializers.ModelSerializer):
