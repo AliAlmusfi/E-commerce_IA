@@ -4,7 +4,11 @@ from tools.models import TimeStampedModel
 
 
 # Create your models here.
-
+def product_image_upload_path(instance , filename):
+    if not instance.id:
+        # Handle case where instance isn't saved yet
+        return f'products/temp/{filename}'
+    return f'products/{instance.id}/{filename}'
 class Product(TimeStampedModel):
     class Meta:
         db_table = 'product'
@@ -14,6 +18,7 @@ class Product(TimeStampedModel):
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0 , blank=True)
     description = models.CharField(max_length=100)
     stock = models.IntegerField()
+    image = models.ImageField(upload_to=product_image_upload_path, null=True, blank=True)
 
 
 

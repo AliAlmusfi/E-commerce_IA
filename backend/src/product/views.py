@@ -36,7 +36,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
                     'manufacture': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
-                    'stock': {'type': 'integer' , 'example': 20}
+                    'stock': {'type': 'integer' , 'example': 20},
+                    'image': {'type': 'string', 'format': 'binary'}
                 },
                 'required': ['title' , 'manufacture' , 'price' , 'stock']
             },
@@ -47,7 +48,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'description': {'type': 'string', 'example': 'Perfect cycle to the long ride'},
                     'manufacture': {'type': 'string' , 'example': 'Giant '},
                     'price': {'type': 'integer' , 'example': 200},
-                    'stock': {'type': 'integer' , 'example': 20}
+                    'stock': {'type': 'integer' , 'example': 20},
+                    'image': {'type': 'string', 'format': 'binary'}
                 },
                 'required': ['title' , 'manufacture' , 'price' , 'stock']
 
