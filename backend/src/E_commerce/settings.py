@@ -181,6 +181,16 @@ REST_FRAMEWORK= {
     'DEFAULT_VERSION': 'v1',  # Default version if none is specified
     'ALLOWED_VERSIONS': ['v1', 'v2'], # List all supported versions
     'VERSION_PARAM': 'version',
+    
+    'DEFAULT_THROTTLE_CLASSES': [
+    'rest_framework.throttling.AnonRateThrottle',
+    'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',  # For unauthenticated users
+        'user': '100/hour'    # For authenticated users
+    },
+    'EXCEPTION_HANDLER': 'tools.error_handler.handlers.custom_exception_handler',
 }
 
 

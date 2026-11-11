@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from .models import User
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from tools.error_handler.exceptions import BusinessRuleViolation
+
 
 # User = get_user_model()
 
@@ -22,4 +24,4 @@ def create_user (username , email , password)-> User:
 
         return user
     except KeyError as e:
-        raise ValidationError(f'{str(e)}: this field is required !')
+        raise BusinessRuleViolation(f'{str(e)}: this field is required !')

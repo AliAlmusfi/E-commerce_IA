@@ -3,6 +3,9 @@ from tools.grpc.client import InventoryClient
 from django.core.exceptions import ValidationError , PermissionDenied
 from django.db import transaction
 from decimal import Decimal
+from product.public import get_products_map
+from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
+
 
 
 
@@ -13,14 +16,15 @@ def create_order(user, items_data: list[dict]) -> Order:
     for item in items_data:
         pid = item['product_id']
         product = client.get_product_stock(pid , user.id)
+        product_public = get_products_map(item["product_id"])
         if product is None :
-            raise ValidationError(
-                {"detail": f"Product {pid} does not exist."}
-            )
+            raise BusinessRuleViolation(f"Product {pid} does not exist.", code="PRODUCT_NOT_FOUND", status_code=404)
         if product['stock'] < item['quantity']:
             #TODO after doing the public.py add it to the product , just get the product info from it like the title
-            raise ValidationError(
-                {"detail":  f"Product has only {product['stock']} in the stock"}
+            title = getattr(product_public, 'title', pid) 
+            raise BusinessRuleViolation(
+                f"Product '{title}' has only {product['stock']} in stock.",
+                code="OUT_OF_STOCK"
             )
         products[pid] = product
 
@@ -39,8 +43,11 @@ def create_order(user, items_data: list[dict]) -> Order:
             total = Decimal("0.00")
 
             for item in items_data:
+                product_public = get_products_map(item["product_id"])
+                
                 pid = products["product_id"]
         #TODO   unit_price =  add this from the public.py from the product 
+                unit_price = product_public.price
                 qty = item["quantity"]
                 OrderItem.objects.create(
                     order=order,
@@ -49,9 +56,9 @@ def create_order(user, items_data: list[dict]) -> Order:
                     # product_manufacturer=product["manufacturer"],
                     # product_image=product["image"],
                     quantity=qty,
-                    #TODO unit_price=unit_price,
+                    unit_price=unit_price,
                 )
-                #TODO total += unit_price * qty
+                total += unit_price * qty
 
             order.total = total
             order.save(update_fields=["total"]) 
@@ -65,18 +72,16 @@ def create_order(user, items_data: list[dict]) -> Order:
 
 def _raise_reservation_failure(client, items_data, products , user):
     for item in items_data:
+        product_public = get_products_map(item["product_id"])
         pid = item["product_id"]
         current = client.get_product_stock(pid , user.id)
         if current is None:
-            raise ValidationError({"detail": f"Product {pid} is no longer available."})
+            raise BusinessRuleViolation( f"Product {pid} is no longer available.")
         if current < item["quantity"]:
             #TODO get the title
-            raise ValidationError({
-                "detail": f"Product '{products[pid]}' has only {current} in stock."
-            })
-    raise ValidationError({
-        "detail": "Could not reserve stock (a concurrent order may have taken it). Please try again."
-    })
+            title = getattr(get_products_map(pid), 'title', pid)
+            raise BusinessRuleViolation(f"Product '{title}' has only {current} in stock.")
+    raise BusinessRuleViolation("Could not reserve stock. Please try again.", code="CONCURRENT_ORDER")
 
 
 def _release_reserved(client, items_data , user):

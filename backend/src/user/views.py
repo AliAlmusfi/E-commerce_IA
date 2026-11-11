@@ -13,6 +13,8 @@ from drf_spectacular.utils import extend_schema
 from .models import User
 from .serializers import UserSerializer , RegisterSerializer , MeSerializer
 from .services import create_user
+
+from tools.error_handler.exceptions import BusinessRuleViolation
 # Create your views here.
 
 
@@ -60,15 +62,16 @@ class UserViewSet (viewsets.ModelViewSet):
     def register(self , request):
         serializer = self.serializer_class(data = request.data)
         serializer.is_valid(raise_exception=True)
-        try:
-            created_user = create_user(
-                username=serializer.validated_data['username'],
-                email=serializer.validated_data['email'],
-                password = serializer.validated_data['password']
-            )
-        except ValidationError as e:
-            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
+        # try:
+        created_user = create_user(
+            username=serializer.validated_data['username'],
+            email=serializer.validated_data['email'],
+            password = serializer.validated_data['password']
+        )
+        # except ValidationError as e:
+        #     return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        # serializer.save()
+        
         return Response(serializer.data , status = status.HTTP_201_CREATED)
         # return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST)
 
