@@ -13,7 +13,7 @@ export const DEMO_PRODUCTS = [
     description: 'A rugged mountain bike built for extreme terrains. Featuring a lightweight aluminum frame, 21-speed gear system, and dual disc brakes for maximum control on steep descents.',
     price: 450,
     category: 'mountain',
-    company_name: 'TrailMaster',
+    manufacture: 'TrailMaster',
     image: img2,
     stock: 12
   },
@@ -23,7 +23,7 @@ export const DEMO_PRODUCTS = [
     description: 'Perfect for daily city rides. Sleek design, puncture-resistant tires, and an integrated LED lighting system to keep you safe during night rides.',
     price: 320,
     category: 'road',
-    company_name: 'CityRide',
+    manufacture: 'CityRide',
     image: img3,
     stock: 8
   },
@@ -33,7 +33,7 @@ export const DEMO_PRODUCTS = [
     description: 'Experience the future of cycling with our premium electric bike. Up to 80km range per charge, 250W motor, and a smart LCD display for real-time stats.',
     price: 1250,
     category: 'electric',
-    company_name: 'VoltBikes',
+    manufacture: 'VoltBikes',
     image: img4,
     stock: 5
   },
@@ -43,7 +43,7 @@ export const DEMO_PRODUCTS = [
     description: 'A safe and fun bike for young riders. Adjustable seat, training wheels included, and a vibrant color scheme that kids love.',
     price: 180,
     category: 'kids',
-    company_name: 'KidsCycle',
+    manufacture: 'KidsCycle',
     image: img5,
     stock: 20
   },
@@ -53,7 +53,7 @@ export const DEMO_PRODUCTS = [
     description: 'A professional-grade carbon fiber mountain bike designed for competitive riders. Weighing only 8.5kg, equipped with Shimano XT components and a full suspension system.',
     price: 2100,
     category: 'mountain',
-    company_name: 'TrailMaster',
+    manufacture: 'TrailMaster',
     image: img9,
     stock: 4
   },
@@ -63,7 +63,7 @@ export const DEMO_PRODUCTS = [
     description: 'A timeless vintage-style bike with a modern twist. Featuring a leather saddle, chrome handlebars, and a comfortable upright riding position.',
     price: 280,
     category: 'road',
-    company_name: 'VintageRide',
+    manufacture: 'VintageRide',
     image: img10,
     stock: 15
   },
@@ -73,7 +73,7 @@ export const DEMO_PRODUCTS = [
     description: 'A three-wheeled electric cargo bike built for heavy loads. 500W motor, 150kg capacity, and a large storage box. Ideal for small businesses.',
     price: 1850,
     category: 'electric',
-    company_name: 'VoltBikes',
+    manufacture: 'VoltBikes',
     image: img11,
     stock: 3
   }

@@ -35,6 +35,31 @@ services:
       retries: 15
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    # maxmemory prevents Redis from eating all container RAM.
+    # allkeys-lru is the safest eviction policy for a pure cache.
+    # appendonly no + save "" = pure in-memory (fastest, cache is rebuilt on restart).
+    command: >
+      redis-server
+      --appendonly no
+      --save ""
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"   # optional: remove in prod, only needed for host debugging
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    # restart: unless-stopped
+
   django-app:
     # CHANGE: Use root as context, specify exact Dockerfile path
     build:
@@ -50,6 +75,7 @@ services:
       - DATABASE_PASSWORD=django_password
       - FLASK_GRPC_HOST=flask-app
       - FLASK_GRPC_PORT=50051
+      - REDIS_URL=redis://redis:6379/1
     command: gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     volumes:
       # CHANGE: Update your path to include backend/
@@ -59,6 +85,8 @@ services:
       - "8000:8000"
     depends_on:
       django-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - app-network
@@ -89,6 +117,7 @@ services:
 volumes:
   django_db_data:
   flask_db_data:
+  redis_data:
 
 networks:
   app-network:

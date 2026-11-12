@@ -1,4 +1,10 @@
-from django.shortcuts import render
+# from django.utils.decorators import method_decorator
+# from django.views.decorators.cache import cache_page
+# from django.views.decorators.vary import vary_on_headers
+
+import hashlib
+from urllib.parse import urlencode
+
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework import status 
@@ -15,10 +21,13 @@ from .serializers import ProductSerializer, ProductUpdateSerializer, ProductStoc
 from .filters import ProductFilter , ProductSearchFilter
 from .services import create_product, patch_product, update_stock as update_stk
 
-# from tools.exceptions import exception_response, grpc_exception_response
-# from tools.grpc.client import InventoryServiceError
+
+from tools.exceptions import exception_response, grpc_exception_response
+from tools.grpc.client import InventoryServiceError
+from tools.caching import do_cache, get_cache_key, get_cached_response
 
 # Create your views here.
+MODULE = "product"
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
@@ -178,7 +187,41 @@ class ProductViewSet(viewsets.ModelViewSet):
         tags=["Product"],
     )    
     def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        endpoint = self.action
+        cache_timeout_minutes = 30
+        
+        cache_key = get_cache_key(
+            module= MODULE,
+            endpoint= endpoint,
+            params_hash= request.query_params.lists(),
+            page= request.query_params.get('page', '1')
+        )
+        cached_response = get_cached_response(cache_key)
+        if cached_response is not None:
+            return cached_response
+
+        
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response:Response = self.get_paginated_response(serializer.data)
+            do_cache(
+                cache_key= cache_key,
+                data= response.data,
+                timeout= 60 * cache_timeout_minutes
+            )
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        do_cache(
+            cache_key= cache_key,
+            data= serializer.data,
+            timeout= 60 * cache_timeout_minutes
+        )
+        return Response(serializer.data)
+        # return super().list(request, *args, **kwargs)
 
     @extend_schema(
         summary="Retrieve",
@@ -186,8 +229,28 @@ class ProductViewSet(viewsets.ModelViewSet):
         description="retrieve Product to user",
         tags=["Product"],
     ) 
-    def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+    def retrieve(self, request, pk, *args, **kwargs):
+        endpoint = self.action
+        cache_timeout_minutes = 30
+        
+        cache_key = get_cache_key(
+            module= MODULE,
+            endpoint= endpoint,
+            wildcard_pk=pk
+        )
+        cached_response = get_cached_response(cache_key)
+        if cached_response is not None:
+            return cached_response
+        
+        
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        do_cache(
+            cache_key= cache_key,
+            data= serializer.data,
+            timeout= 60 * cache_timeout_minutes
+        )
+        return Response(serializer.data)
 
 
     @extend_schema(
