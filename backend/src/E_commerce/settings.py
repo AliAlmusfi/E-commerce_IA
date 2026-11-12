@@ -121,7 +121,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1", # Use DB 1 for caching
+        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/1"), # Use DB 1 for caching
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             # Recommended for production: connection pooling and timeouts
