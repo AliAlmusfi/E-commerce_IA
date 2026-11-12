@@ -19,9 +19,8 @@ const STATUS_OPTIONS = ['pending', 'preparing', 'go out', 'delivered', 'complete
 const EMPTY_PRODUCT = {
   title: '',
   description: '',
+  manufacture: '',
   price: '',
-  category: 'mountain',
-  company_name: '',
   stock: ''
 }
 
@@ -99,18 +98,20 @@ function ProductsTab() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.title || !form.price) {
-      showError('Title and price are required.')
+
+    if (!form.title || !form.manufacture || !form.price || !form.stock) {
+      showError('Title, manufacture, price, and stock are required.')
       return
     }
+
     setSubmitting(true)
     try {
       const fd = new FormData()
-      Object.keys(form).forEach(k => {
-        if (form[k] !== '' && form[k] !== null && form[k] !== undefined) {
-          fd.append(k, form[k])
-        }
-      })
+      fd.append('title', form.title)
+      if (form.description) fd.append('description', form.description)
+      fd.append('manufacture', form.manufacture)
+      fd.append('price', form.price)
+      fd.append('stock', form.stock)
       if (image) fd.append('image', image)
 
       await createProduct(fd)
@@ -125,7 +126,9 @@ function ProductsTab() {
       if (data && typeof data === 'object') {
         const firstKey = Object.keys(data)[0]
         const firstVal = data[firstKey]
-        msg = Array.isArray(firstVal) ? `${firstKey}: ${firstVal[0]}` : `${firstKey}: ${firstVal}`
+        msg = Array.isArray(firstVal)
+          ? `${firstKey}: ${firstVal[0]}`
+          : `${firstKey}: ${firstVal}`
       }
       showError(msg)
     } finally {
@@ -167,7 +170,7 @@ function ProductsTab() {
           top: '90px'
         }}>
           <h3 style={{ color: '#1a2332', marginBottom: '20px', fontSize: '18px' }}>
-             Add New Product
+            ➕ Add New Product
           </h3>
           <form onSubmit={handleSubmit}>
             <input
@@ -186,6 +189,13 @@ function ProductsTab() {
             />
             <input
               style={inputStyle}
+              placeholder="Manufacture *"
+              value={form.manufacture}
+              onChange={e => setForm({ ...form, manufacture: e.target.value })}
+              required
+            />
+            <input
+              style={inputStyle}
               type="number"
               placeholder="Price *"
               value={form.price}
@@ -197,26 +207,11 @@ function ProductsTab() {
             <input
               style={inputStyle}
               type="number"
-              placeholder="Initial Stock"
+              placeholder="Stock *"
               value={form.stock}
               onChange={e => setForm({ ...form, stock: e.target.value })}
+              required
               min="0"
-            />
-            <select
-              style={inputStyle}
-              value={form.category}
-              onChange={e => setForm({ ...form, category: e.target.value })}
-            >
-              <option value="mountain">Mountain</option>
-              <option value="road">Road</option>
-              <option value="electric">Electric</option>
-              <option value="kids">Kids</option>
-            </select>
-            <input
-              style={inputStyle}
-              placeholder="Company Name"
-              value={form.company_name}
-              onChange={e => setForm({ ...form, company_name: e.target.value })}
             />
             <div style={{ marginBottom: '15px' }}>
               <label style={{
@@ -226,7 +221,7 @@ function ProductsTab() {
                 marginBottom: '5px',
                 fontWeight: '600'
               }}>
-                Product Image
+                Product Image (optional)
               </label>
               <input
                 type="file"
@@ -275,7 +270,7 @@ function ProductsTab() {
             marginBottom: '20px'
           }}>
             <h3 style={{ color: '#1a2332', margin: 0, fontSize: '18px' }}>
-               Products ({products.length})
+              📦 Products ({products.length})
             </h3>
             <button
               onClick={load}
@@ -289,7 +284,7 @@ function ProductsTab() {
                 color: '#666'
               }}
             >
-               Refresh
+              🔄 Refresh
             </button>
           </div>
 
@@ -300,7 +295,7 @@ function ProductsTab() {
                   <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
                     <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Image</th>
                     <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Title</th>
-                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Category</th>
+                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Manufacture</th>
                     <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Price</th>
                     <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Stock</th>
                     <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Actions</th>
@@ -340,8 +335,8 @@ function ProductsTab() {
                       <td style={{ padding: '12px 8px', fontWeight: 'bold', color: '#1a2332' }}>
                         {p.title}
                       </td>
-                      <td style={{ padding: '12px 8px', textTransform: 'capitalize', color: '#666' }}>
-                        {p.category}
+                      <td style={{ padding: '12px 8px', color: '#666' }}>
+                        {p.manufacture || '—'}
                       </td>
                       <td style={{ padding: '12px 8px', color: '#1a2332', fontWeight: '600' }}>
                         ${p.price}
@@ -471,7 +466,7 @@ function OrdersTab() {
         marginBottom: '20px'
       }}>
         <h3 style={{ color: '#1a2332', margin: 0, fontSize: '18px' }}>
-           All Orders ({orders.length})
+          🧾 All Orders ({orders.length})
         </h3>
         <button
           onClick={load}
@@ -485,7 +480,7 @@ function OrdersTab() {
             color: '#666'
           }}
         >
-           Refresh
+          🔄 Refresh
         </button>
       </div>
 

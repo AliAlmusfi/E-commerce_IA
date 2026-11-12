@@ -24,7 +24,8 @@ from django.conf.urls.static import static
 
 
 
-
+from django.conf.urls.static import static
+from django.conf import settings
 
 api_patterns = [
     path('users/token/' , extend_schema_view(
