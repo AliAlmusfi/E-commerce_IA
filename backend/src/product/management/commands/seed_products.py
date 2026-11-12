@@ -5,6 +5,8 @@ from faker import Faker
 
 from ...models import Product
 
+from ...services import create_product
+
 fake = Faker()
 
 
@@ -31,19 +33,32 @@ class Command(BaseCommand):
             deleted, _ = Product.objects.all().delete()
             self.stdout.write(self.style.WARNING(f"Deleted {deleted} existing products"))
 
-        products = []
-        for _ in range(count):
-            products.append(
-                Product(
-                    title=fake.word()[:20].title(),
-                    manufacture=fake.company()[:20],
-                    price=Decimal(random.randint(100, 500000)) / 100,
-                    description=fake.sentence(nb_words=10)[:100],
-                    stock=random.randint(0, 500),
-                )
-            )
 
-        Product.objects.bulk_create(products)
+        for _ in range(count):
+            product_data  = {
+                "title" : fake.word()[:20].title(),
+                "manufacturer": fake.company()[:20],
+                "price": Decimal(random.randint(100 , 500000)) / 100,
+                "description": fake.sentence(nb_words=10)[:100],
+                "stock": random.randint(0,500)
+            }
+            # product = Product(
+            #     title=fake.word()[:20].title(),
+            #     manufacturer=fake.company()[:20],
+            #     price=Decimal(random.randint(100, 500000)) / 100,
+            #     description=fake.sentence(nb_words=10)[:100],
+            #     stock=random.randint(0, 500),
+            # )
+            # products.append(product)
+            create_product(4,product_data)
+
+            try:
+                create_product(4, product_data)
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Failed to create product: {str(e)}"))
+
+
+        # Product.objects.bulk_create(products)
         self.stdout.write(
             self.style.SUCCESS(f"Successfully created {count} products")
         )
