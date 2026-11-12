@@ -205,7 +205,7 @@ REST_FRAMEWORK= {
         'anon': '20/minute',  # For unauthenticated users
         'user': '100/hour'    # For authenticated users
     },
-    'EXCEPTION_HANDLER': 'tools.error_handler.handlers.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'tools.error_handler.exceptions.custom_exception_handler',
 }
 
 
