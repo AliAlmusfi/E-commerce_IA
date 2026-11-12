@@ -27,7 +27,7 @@ from django.conf.urls.static import static
 
 
 api_patterns = [
-    path('users/token/' , extend_schema_view(
+    path('v1/users/token/' , extend_schema_view(
         post=extend_schema(
             tags=['Users/Auth'],
             summary="Token",
@@ -41,10 +41,10 @@ api_patterns = [
                 }
             }
         ))(TokenObtainPairView.as_view()) , name='token_obtain_pair'),
-    path('users/token/refresh/' , extend_schema_view(post=extend_schema(tags=['Users/Auth'], summary="Refresh Token"))(TokenRefreshView.as_view()) , name='token_refresh'),
+    path('v1/users/token/refresh/' , extend_schema_view(post=extend_schema(tags=['Users/Auth'], summary="Refresh Token"))(TokenRefreshView.as_view()) , name='token_refresh'),
     path('v1/' , include('user.urls.v1') ),
     path('v1/' , include('order.urls.v1') ),
-    path('' , include('product.urls') ),
+    path('v1/' , include('product.urls.v1') ),
     
 ]
 
