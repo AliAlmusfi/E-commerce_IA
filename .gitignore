@@ -67,9 +67,9 @@ Thumbs.db
 
 # own
 secrets
-migrations
-src/*/migrations/*
-!src/*/migrations/__init__.py
+# migrations
+# src/*/migrations/*
+# !src/*/migrations/__init__.py
 
 backend/src/E_commerce/__pycache__/
 backend/src/e_commerce/__pycache__/
