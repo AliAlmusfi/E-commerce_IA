@@ -71,6 +71,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # own
+    'tools.db.middleware.ReadYourWritesMiddleware',
+    # end own
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -101,10 +104,6 @@ WSGI_APPLICATION = 'e_commerce.wsgi.application'
 load_dotenv(BASE_DIR / '.env') 
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
     'default': {
         'ENGINE': os.getenv('DATABASE_ENGINE' , 'django.db.backends.mysql'), 
         'NAME': os.getenv('DATABASE_NAME' , Path(__file__).resolve().parent.name),
@@ -115,8 +114,22 @@ DATABASES = {
         "OPTIONS": {
             "init_command": "SET default_storage_engine=INNODB",
         },
-    }
+    },
+    "replica": {
+        'ENGINE': os.getenv('REPLICA_DATABASE_ENGINE' , 'django.db.backends.mysql'), 
+        'NAME': os.getenv('REPLICA_DATABASE_NAME' , Path(__file__).resolve().parent.name),
+        'USER': os.getenv('REPLICA_DATABASE_USER' , 'root'),
+        'PASSWORD': os.getenv('REPLICA_DATABASE_PASSWORD' , ''),
+        'HOST': os.getenv('REPLICA_DATABASE_HOST' , 'django-replica-db'),
+        'PORT': os.getenv('REPLICA_DATABASE_PORT' , '3306'),
+        # Optional: Tell Django's test runner this mirrors 'default'
+        "TEST": {
+            "MIRROR": "default",
+        },
+    },
 }
+DATABASE_ROUTERS = ["tools.db.db_router.PrimaryReplicaRouter"]
+
 
 CACHES = {
     "default": {

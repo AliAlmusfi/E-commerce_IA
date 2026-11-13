@@ -2,7 +2,7 @@ from .models import Product
 
 from tools.grpc.client import InventoryClient #, InventoryServiceError
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
-
+from tools.db.db_router import WRITE_DB
 
 
 def create_product(user_id, data:dict)->Product:
@@ -10,7 +10,7 @@ def create_product(user_id, data:dict)->Product:
     product = None
     stock = data.pop('stock')
 
-    product = Product.objects.create(**data)
+    product = Product.objects.using(WRITE_DB).create(**data)
     if product is None:
         raise Exception("can't create product !")
 
@@ -34,10 +34,10 @@ def create_product(user_id, data:dict)->Product:
     return product
 
 def delete_product(id:int):
-    Product.objects.filter(id=id).delete()
+    Product.objects.using(WRITE_DB).filter(id=id).delete()
 
 def patch_product(id, user_id, data:dict)->Product:
-    product = Product.objects.get(id)
+    product = Product.objects.using(WRITE_DB).get(id)
     if product is None:
         raise BusinessRuleViolation(f"Product {id} is not found!", code="NOT_FOUND", status_code=404)
 
@@ -52,7 +52,7 @@ def patch_product(id, user_id, data:dict)->Product:
     if data['image']:
         product.image = data['image']
 
-    product.save()
+    product.save(using=WRITE_DB)
 
     return product
 
