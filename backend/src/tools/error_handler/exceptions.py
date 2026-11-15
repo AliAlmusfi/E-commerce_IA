@@ -1,4 +1,5 @@
 import grpc 
+from django.db.utils import OperationalError, IntegrityError, ProgrammingError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 from rest_framework import status
@@ -28,7 +29,7 @@ class BusinessRuleViolation(AppBaseException):
         super().__init__(message, code="BUSINESS_RULE_VIOLATION", status_code=400, details=details)
 
 
-def custom_exception_handler(exc, context):
+def custom_exception_handler(exc:Exception, context):
     """
     This function intercepts EVERY exception in your views.
     You no longer need try/except blocks in your views!
@@ -76,8 +77,15 @@ def custom_exception_handler(exc, context):
             status=http_status,
         )
 
+    if isinstance(exc, IntegrityError):
+        return Response(
+            {
+                "detail": f"Database constraint violation: {str(exc)}"
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     # 4. Fallback for unknown exceptions (so you never return an HTML 500 page)
     return Response(
-        {"detail": f"Internal Server Error: {str(exc)}"},
-        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        {"detail": f"Exception({str(exc.__class__) or "no-class"}): {str(exc)}"},
+        status=status.HTTP_409_CONFLICT
     )

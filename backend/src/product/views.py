@@ -19,8 +19,7 @@ from drf_spectacular.utils import extend_schema
 from .models import Product
 from .serializers import ProductSerializer, ProductUpdateSerializer, ProductStockSerializer
 from .filters import ProductFilter , ProductSearchFilter
-from .services import create_product, patch_product, update_stock as update_stk
-
+from .services import create_product, patch_product, get_stock, update_stock as update_stk
 
 from tools.exceptions import exception_response, grpc_exception_response
 from tools.grpc.client import InventoryServiceError
@@ -95,9 +94,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         # except InventoryServiceError as e:
         #     return grpc_exception_response(e)
 
-        product_data = self.get_serializer(product)
+        product_data = self.get_serializer(instance=product)
         return Response(
-            product_data,
+            product_data.data,
             status=status.HTTP_201_CREATED
         )
         # except Exception as e:
@@ -142,7 +141,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         product_data = self.get_serializer(product)
         return Response(
-            product_data,
+            product_data.data,
             status=status.HTTP_202_ACCEPTED
         )
         # except Exception as e:
@@ -157,9 +156,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             'application/json': {
                 'type': 'object',
                 'properties': {
-                    'stock': {'type': 'integer' , 'example': 20}
+                    'amount': {'type': 'integer' , 'example': 20}
                 },
-                'required': ['stock']
+                'required': ['amount']
             },
         }        
     )
@@ -169,7 +168,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = ProductStockSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
             # try:
-        updated = update_stk(pk, request.user.id, serializer.validated_data['amount'])
+        updated = update_stk(int(pk), request.user.id, serializer.validated_data['amount'])
             # except InventoryServiceError as e:
             #     return grpc_exception_response(e)
 
@@ -238,19 +237,18 @@ class ProductViewSet(viewsets.ModelViewSet):
             endpoint= endpoint,
             wildcard_pk=pk
         )
-        cached_response = get_cached_response(cache_key)
-        if cached_response is not None:
-            return cached_response
+        product_data = get_cached_response(cache_key)
+        if product_data is None:
+            instance = self.get_object()
+            product_data = dict(self.get_serializer(instance).data)
+            do_cache(
+                cache_key= cache_key,
+                data= product_data,
+                timeout= 60 * cache_timeout_minutes
+            )
         
-        
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        do_cache(
-            cache_key= cache_key,
-            data= serializer.data,
-            timeout= 60 * cache_timeout_minutes
-        )
-        return Response(serializer.data)
+        product_data.data['stock'] = get_stock(id=int(pk), user_id=int(request.user.id))
+        return Response(product_data.data)
 
 
     @extend_schema(
