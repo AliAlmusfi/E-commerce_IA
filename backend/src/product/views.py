@@ -48,7 +48,13 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         self.permission_classes = [IsAuthenticated]
-        if self.action == 'create' or self.action == 'update' or self.action == 'partial_update' or self.action == 'update_stock':
+        if (self.action in [
+                'create',
+                'update',
+                'partial_update',
+                'update_stock',
+                'destroy'
+            ]):
             self.permission_classes.append(IsAdminUser)
         return super().get_permissions()
 
@@ -237,18 +243,21 @@ class ProductViewSet(viewsets.ModelViewSet):
             endpoint= endpoint,
             wildcard_pk=pk
         )
-        product_data = get_cached_response(cache_key)
-        if product_data is None:
+        cached = get_cached_response(cache_key)
+        if cached is not None:
+            data = dict(cached.data)
+        else:
             instance = self.get_object()
-            product_data = dict(self.get_serializer(instance).data)
+            data = dict(self.get_serializer(instance).data)
             do_cache(
-                cache_key= cache_key,
-                data= product_data,
-                timeout= 60 * cache_timeout_minutes
+                cache_key=cache_key,
+                data=data,
+                timeout=60 * cache_timeout_minutes
             )
-        
-        product_data.data['stock'] = get_stock(id=int(pk), user_id=int(request.user.id))
-        return Response(product_data.data)
+
+        data["stock"] = get_stock(id=int(pk), user_id=int(request.user.id))
+        return Response(data)
+            
 
 
     @extend_schema(
