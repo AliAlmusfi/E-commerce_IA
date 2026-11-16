@@ -68,6 +68,7 @@ Thumbs.db
 # own
 secrets
 
+
 backend/src/E_commerce/__pycache__/
 backend/src/e_commerce/__pycache__/
 

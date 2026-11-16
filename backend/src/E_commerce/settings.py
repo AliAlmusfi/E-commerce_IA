@@ -215,6 +215,13 @@ REST_FRAMEWORK= {
     },
     'EXCEPTION_HANDLER': 'tools.error_handler.exceptions.custom_exception_handler',
 }
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    # 'USER_ID_FIELD': 'id',        # Model field to use as user identifier
+    # 'USER_ID_CLAIM': 'user_id',   # Default claim name in token payload
+    # 'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer', # handle email as username
+}
 
 
 #firebase notification
