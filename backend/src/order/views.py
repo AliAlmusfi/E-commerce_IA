@@ -140,8 +140,21 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        order = initiate_order_processing(
+            user_id=request.user.id,
+            user_email=request.user.email,
+            items_data=serializer.validated_data["items"]
+        )
+        return Response(
+            {
+                "order_id": order.id,
+                "status": "processing",
+                "message": "We are processing your order. Please check your email for confirmation."
+            },
+            status=status.HTTP_202_ACCEPTED
+        )
         # try:
-        order = create_order(user = request.user , items_data=serializer.validated_data["items"])
+        # order = create_order(user = request.user , items_data=serializer.validated_data["items"])
         # except InventoryServiceError as exc:
         #     return Response(
         #         {
@@ -154,8 +167,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             
         #     return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
 
-        out = OrderSerializer(order, context=self.get_serializer_context())
-        return Response(out.data, status=status.HTTP_201_CREATED)
+        # out = OrderSerializer(order, context=self.get_serializer_context())
+        # return Response(out.data, status=status.HTTP_201_CREATED)
 
     # ─── update / partial_update — DISABLED ────────────────────
     @extend_schema(exclude=True)
