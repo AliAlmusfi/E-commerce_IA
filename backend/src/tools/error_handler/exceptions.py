@@ -1,5 +1,6 @@
 import grpc 
 from django.db.utils import OperationalError, IntegrityError, ProgrammingError
+from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 from rest_framework import status
@@ -76,7 +77,13 @@ def custom_exception_handler(exc:Exception, context):
             },
             status=http_status,
         )
-
+    if isinstance(exc, ValidationError):
+        return Response(
+            {
+                "detail": f"Validation Error: {str(exc)}"
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
     if isinstance(exc, IntegrityError):
         return Response(
             {
