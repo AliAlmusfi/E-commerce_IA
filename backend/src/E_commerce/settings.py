@@ -259,3 +259,22 @@ INVENTORY_GRPC_HOST = os.getenv('INVENTORY_GRPC_HOST' , '')
 #     'ALLOWED_VERSIONS': ['v1', 'v2'], # List all supported versions
 #     'VERSION_PARAM': 'version',
 # }
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "sql": {"format": "%(asctime)s %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "sql"},
+    },
+    "loggers": {
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}

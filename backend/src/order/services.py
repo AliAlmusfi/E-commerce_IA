@@ -39,7 +39,7 @@ def create_order(user, items_data: list[dict]) -> Order:
 
     try:
         with transaction.atomic():
-            order = Order.objects.using(WRITE_DB).create(user_id = user.id)
+            order = Order.objects.db_manager(WRITE_DB).create(user_id = user.id)
             total = Decimal("0.00")
 
             for item in items_data:
@@ -49,7 +49,7 @@ def create_order(user, items_data: list[dict]) -> Order:
         #TODO   unit_price =  add this from the public.py from the product 
                 unit_price = product_public.price
                 qty = item["quantity"]
-                OrderItem.objects.using(WRITE_DB).create(
+                OrderItem.objects.db_manager(WRITE_DB).create(
                     order=order,
                     product_id=item["product_id"],
                     # product_title=product["title"],             # snapshot

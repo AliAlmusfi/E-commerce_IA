@@ -50,10 +50,10 @@ class Command(BaseCommand):
             #     stock=random.randint(0, 500),
             # )
             # products.append(product)
-            create_product(4,product_data)
+            create_product(1,product_data)
 
             try:
-                create_product(4, product_data)
+                create_product(1, product_data)
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to create product: {str(e)}"))
 

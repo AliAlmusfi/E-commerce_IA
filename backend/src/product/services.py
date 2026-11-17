@@ -10,7 +10,7 @@ def create_product(user_id, data:dict)->Product:
     product = None
     stock = data.pop('stock')
 
-    product = Product.objects.using(WRITE_DB).create(**data)
+    product = Product.objects.db_manager(WRITE_DB).create(**data)
     if product is None:
         raise Exception("can't create product !")
 
@@ -34,10 +34,10 @@ def create_product(user_id, data:dict)->Product:
     return product
 
 def delete_product(id:int):
-    Product.objects.using(WRITE_DB).filter(id=id).delete()
+    Product.objects.db_manager(WRITE_DB).filter(id=id).delete()
 
 def patch_product(id, user_id, data:dict)->Product:
-    product = Product.objects.using(WRITE_DB).get(id)
+    product = Product.objects.db_manager(WRITE_DB).get(id)
  
     if product is None:
         raise BusinessRuleViolation(f"Product {id} is not found!", code="NOT_FOUND", status_code=404)
