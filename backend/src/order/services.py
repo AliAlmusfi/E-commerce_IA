@@ -5,7 +5,7 @@ from django.db import transaction
 from decimal import Decimal
 from product.public import get_products_map
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
-
+from tools.db.db_router import WRITE_DB
 
 
 
@@ -39,7 +39,7 @@ def create_order(user, items_data: list[dict]) -> Order:
 
     try:
         with transaction.atomic():
-            order = Order.objects.create(user_id = user.id)
+            order = Order.objects.using(WRITE_DB).create(user_id = user.id)
             total = Decimal("0.00")
 
             for item in items_data:
@@ -49,7 +49,7 @@ def create_order(user, items_data: list[dict]) -> Order:
         #TODO   unit_price =  add this from the public.py from the product 
                 unit_price = product_public.price
                 qty = item["quantity"]
-                OrderItem.objects.create(
+                OrderItem.objects.using(WRITE_DB).create(
                     order=order,
                     product_id=item["product_id"],
                     # product_title=product["title"],             # snapshot
@@ -61,7 +61,7 @@ def create_order(user, items_data: list[dict]) -> Order:
                 total += unit_price * qty
 
             order.total = total
-            order.save(update_fields=["total"]) 
+            order.save(update_fields=["total"], using=WRITE_DB)
 
             return order
     except Exception:
@@ -124,5 +124,5 @@ def update_order_status(user , order:Order , new_status: str) ->Order:
         })
 
     order.status = new_status
-    order.save(update_fields=['status'])
+    order.save(update_fields=['status'], using=WRITE_DB)
     return order
