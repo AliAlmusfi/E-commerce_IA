@@ -5,70 +5,56 @@ from django.db import transaction
 from decimal import Decimal
 from product.public import get_products_map
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
-from .tasks import send_order_confirmation_email
-from user.public import get_users_map
-from .tasks import process_order_async
 
 
 
-def initiate_order_processing(user_id: int, user_email: str, items_data: list[dict]) -> Order:
 
-    # 1. Create the shell order
-    order = Order.objects.create(
-        user_id=user_id, 
-        status=Order.Status.PROCESSING
-    )
-
-
-    transaction.on_commit(
-        lambda: process_order_async.delay(
-            order_id=order.id,
-            items_data=items_data,
-            user_id=user_id,
-            user_email=user_email
-        )
-    )
-
-    return order
-
-
-def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> Order:
+def create_order(user, items_data: list[dict]) -> Order:
 
     client = InventoryClient()
     products = {}
-    
     for item in items_data:
         pid = item['product_id']
-        product = client.get_product_stock(pid, user_id)
-        product_public = get_products_map(pid)
-        
-        if product is None:
+        product = client.get_product_stock(pid , user.id)
+        product_public = get_products_map(item["product_id"])
+        if product is None :
             raise BusinessRuleViolation(f"Product {pid} does not exist.", code="PRODUCT_NOT_FOUND", status_code=404)
         if product['stock'] < item['quantity']:
+            #TODO after doing the public.py add it to the product , just get the product info from it like the title
             title = getattr(product_public, 'title', pid) 
-            raise BusinessRuleViolation(f"Product '{title}' has only {product['stock']} in stock.", code="OUT_OF_STOCK")
+            raise BusinessRuleViolation(
+                f"Product '{title}' has only {product['stock']} in stock.",
+                code="OUT_OF_STOCK"
+            )
         products[pid] = product
 
+
     result = client.reserve_order(
-        item=[(item['product_id'], item['quantity']) for item in items_data],
-        user_id=user_id
+        item=[(item['product_id'] , item['quantity']) for item in items_data],
+        user_id=user.id
     )
 
     if not result['success']:
-        _raise_reservation_failure(client, items_data, products, user_id)
+        _raise_reservation_failure(client, items_data, products , user)
 
     try:
         with transaction.atomic():
+            order = Order.objects.create(user_id = user.id)
             total = Decimal("0.00")
+
             for item in items_data:
                 product_public = get_products_map(item["product_id"])
-                pid = item["product_id"]
+                
+                pid = products["product_id"]
+        #TODO   unit_price =  add this from the public.py from the product 
                 unit_price = product_public.price
                 qty = item["quantity"]
-                
                 OrderItem.objects.create(
                     order=order,
-                    product_id=pid,
+                    product_id=item["product_id"],
+                    # product_title=product["title"],             # snapshot
+                    # product_manufacturer=product["manufacturer"],
+                    # product_image=product["image"],
                     quantity=qty,
                     unit_price=unit_price,
                 )
@@ -76,9 +62,11 @@ def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> 
 
             order.total = total
             order.save(update_fields=["total"]) 
-            
+
+            return order
     except Exception:
-        _release_reserved(client, items_data, user_id)
+        
+        _release_reserved(client, items_data , user)
         raise   
 
 

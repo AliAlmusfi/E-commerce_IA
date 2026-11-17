@@ -76,7 +76,6 @@ services:
       - FLASK_GRPC_HOST=flask-app
       - FLASK_GRPC_PORT=50051
       - REDIS_URL=redis://redis:6379/1
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
     command: gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     volumes:
       # CHANGE: Update your path to include backend/
@@ -88,8 +87,6 @@ services:
       django-db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
     networks:
       - app-network
@@ -117,63 +114,10 @@ services:
     networks:
       - app-network
 
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
-      CELERY_RESULT_BACKEND: rpc:// 
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 30s
-
-
-  celery-worker:
-    build:
-      context: .
-      dockerfile: src/DockerFile
-    env_file:
-      - ./src/.env
-    environment:
-      - DJANGO_DEBUG=0
-      - DATABASE_HOST=django-db
-      - DATABASE_NAME=django_db
-      - DATABASE_USER=django_user
-      - DATABASE_PASSWORD=django_password
-      - FLASK_GRPC_HOST=flask-app
-      - FLASK_GRPC_PORT=50051
-      - REDIS_URL=redis://redis:6379/1
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
-    entrypoint: ["celery", "-A", "e_commerce", "worker", "-l", "info"]
-    volumes:
-      - ./src:/app
-      - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      django-db:
-        condition: service_healthy
-    networks:
-      - app-network
-
 volumes:
   django_db_data:
   flask_db_data:
   redis_data:
-  rabbitmq_data:
-
 
 networks:
   app-network:
