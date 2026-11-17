@@ -10,13 +10,13 @@ from tools.db.db_router import WRITE_DB
 
 def get_users_by_ids(user_ids: list[int]) -> list[User]:
 
-    return User.objects.using(WRITE_DB).filter(id__in=user_ids)
+    return User.objects.db_manager(WRITE_DB).filter(id__in=user_ids)
 
 
 def create_user (username , email , password)-> User:
     try:
         with transaction.atomic():
-            user = User.objects.using(WRITE_DB).create_user(
+            user = User.objects.db_manager(WRITE_DB).create_user(
                 username = username,
                 email = email,
                 password = password,
