@@ -15,7 +15,11 @@ from requests_log.services import RequestBuilder
 
 def get_product_stock_by_id(request, context:grpc.ServicerContext, request_builder:RequestBuilder)-> dict:
     try:
-        product = db_session.get(Product, request.product_id)
+        product =  (
+            db_session.query(Product)
+            .filter(Product.product_id == request.product_id)
+            .first()
+        )
         if product is None:
             product_not_found(
                 request.product_id,

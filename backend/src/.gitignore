@@ -66,6 +66,5 @@ Thumbs.db
 
 
 # own
-user/migrations/*
 E_commerce/__pycache__/
 e_commerce/__pycache__/
