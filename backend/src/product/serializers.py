@@ -17,8 +17,8 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             'id': {'read_only': True},
-            'title': {'required': True}, 
-            'manufacturer': {'required': True}, 
+            'title': {'required': True},
+            'manufacturer': {'required': True},
             'price': {'required': True}
         }
 
@@ -30,10 +30,10 @@ class ProductSerializer(serializers.ModelSerializer):
 
         return value
 
-    # def to_representation(self, instance):
-    #     data = super().to_representation(instance)
-    #     data['stock'] = self._get_stock(instance)
-    #     return data
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['stock'] = self._get_stock(instance)
+        return data
 
     def _get_stock(self, instance):
         return get_stock(
