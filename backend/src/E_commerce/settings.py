@@ -174,14 +174,19 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+# MAILERS = {
+#     'default': {
+#         'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+#         'HOST': 'smtp.gmail.com',
+#         'PORT': 587,
+#         'USER': os.getenv('EMAIL_HOST_USER'),
+#         'PASSWORD': os.getenv('EMAIL_HOST_PASSWORD'),
+#         'USE_TLS': True,
+#     },
+# }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'Cycle@ecommerce.com'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# DEFAULT_FROM_EMAIL = 'Tick Tack Go'
 EMAIL_HOST = 'smtp.gmail.com' 
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
@@ -276,5 +281,5 @@ CELERY_TASK_QUEUES = {
         'queue_arguments': {'x-dead-letter-exchange': 'dlx_exchange'}
     }
 }
-
+CELERY_TASK_DEFAULT_QUEUE = 'default'
 

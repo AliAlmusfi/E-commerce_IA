@@ -24,17 +24,18 @@ def create_product(user_id, data:dict)->Product:
             stock=stock
         )
     except InventoryServiceError:
-        delete_product(product.id)
+        delete_product(product)
         raise
 
     if not response['product_id']:
-        delete_product(product.id)
+        delete_product(product)
         raise BusinessRuleViolation("can't create product storage (but can create product with no storage)!")
 
     return product
 
-def delete_product(id:int):
-    Product.objects.filter(id=id).delete()
+def delete_product(product:Product):
+    # Product.objects.filter(id=id).delete()
+    product.delete()
 
 def patch_product(id, user_id, data:dict)->Product:
     product = Product.objects.get(id=id)
