@@ -7,32 +7,33 @@ export const createOrder = async (items) => {
       quantity: i.qty
     }))
   }
-  const { data } = await api.post('/orders/', payload)
+  // تم إضافة /v1/ بناءً على الـ Swagger
+  const { data } = await api.post('/v1/orders/', payload)
   return data
 }
 
 export const fetchMyOrders = async () => {
-  const { data } = await api.get('/orders/')
+  const { data } = await api.get('/v1/orders/')
   return Array.isArray(data) ? data : (data.results || [])
 }
 
 export const fetchOrderDetail = async (orderId) => {
-  const { data } = await api.get(`/orders/${orderId}/`)
+  const { data } = await api.get(`/v1/orders/${orderId}/`)
   return data
 }
 
 export const fetchAllOrders = async (params = {}) => {
-  const { data } = await api.get('/orders/', { params })
+  const { data } = await api.get('/v1/orders/', { params })
   return Array.isArray(data) ? data : (data.results || [])
 }
 
 export const updateOrderStatus = async (orderId, status) => {
-  const { data } = await api.patch(`/orders/${orderId}/status/`, { status })
+  const { data } = await api.patch(`/v1/orders/${orderId}/status/`, { status })
   return data
 }
 
 export const deleteOrder = async (orderId) => {
-  await api.delete(`/orders/${orderId}/`)
+  await api.delete(`/v1/orders/${orderId}/`)
 }
 
 export const parseOrderError = (err) => {

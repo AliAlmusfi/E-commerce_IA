@@ -15,7 +15,15 @@ const refreshApi = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  
+  // تحديث الفحص ليشمل /v1/users/register/
+  const isAuthEndpoint = 
+    config.url?.includes('/users/token/') || 
+    config.url?.includes('/users/register/')
+
+  if (token && !isAuthEndpoint) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
   return config
 })
 

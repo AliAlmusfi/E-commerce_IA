@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
 import { useAuth } from '../context/AuthContext'
 import Alert from '../components/feedback/Alert'
@@ -10,29 +10,45 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  
   const { register, isAuthenticated, loading } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/home', { replace: true })
-  }, [isAuthenticated, navigate])
+    if (isAuthenticated) {
+      const from = location.state?.from?.pathname || '/home'
+      navigate(from, { replace: true })
+    }
+  }, [isAuthenticated, navigate, location])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (password !== confirmPassword) return setError('Passwords do not match')
-    if (password.length < 8) return setError('Password must be at least 8 characters')
+
+    if (password !== confirmPassword) {
+      return setError('Passwords do not match')
+    }
+    if (password.length < 8) {
+      return setError('Password must be at least 8 characters')
+    }
 
     try {
       await register(username, email, password)
     } catch (err) {
-      const detail = err?.response?.data
-      if (detail && typeof detail === 'object') {
-        const first = Object.values(detail)[0]
-        setError(Array.isArray(first) ? first[0] : first)
-      } else {
-        setError('Registration failed. Please try again.')
+      const data = err?.response?.data
+      let msg = 'Registration failed. Email or username might already be in use.'
+      
+      // محاولة استخراج رسالة الخطأ الدقيقة من الباك إند
+      if (data && typeof data === 'object') {
+        const firstKey = Object.keys(data)[0]
+        const firstVal = data[firstKey]
+        msg = Array.isArray(firstVal) ? firstVal[0] : String(firstVal)
+      } else if (data?.detail) {
+        msg = data.detail
       }
+      
+      setError(msg)
     }
   }
 
@@ -53,7 +69,10 @@ export default function Register() {
       }}>
         <div style={{
           position: 'absolute',
-          top: 0, left: 0, width: '100%', height: '100%',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
           background: 'linear-gradient(135deg, #325662 30%, #4a7a8c 100%)',
           clipPath: 'polygon(0 0, 100% 0, 100% 55%, 0 90%)',
           zIndex: 0
@@ -72,18 +91,20 @@ export default function Register() {
         }}>
           <div style={{ textAlign: 'center', marginBottom: '35px' }}>
             <h1 style={{ color: '#325662', fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>Create Account</h1>
+            <p style={{ color: '#888', fontSize: '15px' }}>Join us to start shopping</p>
           </div>
 
           <Alert message={error} />
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: '#325662', fontWeight: '600', fontSize: '14px' }}>Full Name</label>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#325662', fontWeight: '600', fontSize: '14px' }}>Full Name / Username</label>
               <input
                 type="text"
                 placeholder="John Doe"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
+                autoComplete="name"
                 required
                 style={{
                   width: '100%',
@@ -106,6 +127,7 @@ export default function Register() {
                 placeholder="name@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
                 required
                 style={{
                   width: '100%',
@@ -128,6 +150,7 @@ export default function Register() {
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                autoComplete="new-password"
                 required
                 minLength={8}
                 style={{
@@ -151,6 +174,7 @@ export default function Register() {
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
                 required
                 style={{
                   width: '100%',
@@ -188,13 +212,28 @@ export default function Register() {
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
-
-            <div style={{ marginTop: '30px', textAlign: 'center' }}>
-              <p style={{ color: '#666', fontSize: '14px' }}>
-                Already have an account? <Link to="/" style={{ color: '#f7c17b', fontWeight: 'bold', textDecoration: 'none' }}>Sign in here</Link>
-              </p>
-            </div>
           </form>
+
+          <div style={{ textAlign: 'center', marginTop: '25px' }}>
+            <p style={{ color: '#666', fontSize: '14px', marginBottom: '15px' }}>
+              Already have an account?{' '}
+              <Link to="/" style={{ color: '#f7c17b', fontWeight: 'bold', textDecoration: 'none' }}>
+                Sign in here
+              </Link>
+            </p>
+            <Link
+              to="/shop"
+              style={{
+                display: 'inline-block',
+                color: '#325662',
+                fontWeight: 'bold',
+                textDecoration: 'underline',
+                fontSize: '14px'
+              }}
+            >
+              Browse shop as guest →
+            </Link>
+          </div>
         </div>
       </div>
     </>

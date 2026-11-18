@@ -34,10 +34,11 @@ export default function Shop() {
           throw new Error('Empty response')
         }
         setProducts(list)
-        setTotalPages(data.total_pages || 1)
+        setTotalPages(data.total_pages || Math.ceil(data.count / 10) || 1)
         setIsDemo(false)
       // eslint-disable-next-line no-unused-vars
       } catch (err) {
+        // في حال فشل الـ API (401 أو 500)، نعرض البيانات التجريبية
         const filtered = category
           ? DEMO_PRODUCTS.filter(p => p.category === category)
           : DEMO_PRODUCTS
@@ -76,7 +77,7 @@ export default function Shop() {
               fontWeight: 'bold',
               border: '1px solid #ffeeba'
             }}>
-              ⚠️ Currently showing demo products. The server is not reachable.
+              ⚠️ Currently showing demo products. The server is not reachable or Inventory Service is down.
             </div>
           )}
 
@@ -133,7 +134,7 @@ export default function Shop() {
                                   </div>
                                 </div>
                                 <div className="col-md-6">
-                                  {product.manufacture && (
+                                  {product.manufacturer && (
                                     <p style={{
                                       color: '#f7c17b',
                                       fontWeight: 'bold',
@@ -142,7 +143,7 @@ export default function Shop() {
                                       fontSize: '13px',
                                       marginBottom: '8px'
                                     }}>
-                                      {product.manufacture}
+                                      {product.manufacturer}
                                     </p>
                                   )}
                                   <h1 className="cycles_text">{product.title}</h1>
@@ -170,7 +171,7 @@ export default function Shop() {
                             ) : (
                               <>
                                 <div className="col-md-6">
-                                  {product.manufacture && (
+                                  {product.manufacturer && (
                                     <p style={{
                                       color: '#f7c17b',
                                       fontWeight: 'bold',
@@ -179,7 +180,7 @@ export default function Shop() {
                                       fontSize: '13px',
                                       marginBottom: '8px'
                                     }}>
-                                      {product.manufacture}
+                                      {product.manufacturer}
                                     </p>
                                   )}
                                   <h1 className="cycles_text">{product.title}</h1>

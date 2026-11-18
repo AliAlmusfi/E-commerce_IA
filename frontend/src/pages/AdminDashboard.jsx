@@ -24,6 +24,27 @@ const EMPTY_PRODUCT = {
   stock: ''
 }
 
+const inputStyle = {
+  width: '100%',
+  padding: '10px 12px',
+  border: '1px solid #d1d5db',
+  borderRadius: '6px',
+  outline: 'none',
+  fontSize: '14px',
+  color: '#374151',
+  boxSizing: 'border-box',
+  transition: 'border-color 0.2s',
+  backgroundColor: '#ffffff'
+}
+
+const labelStyle = {
+  display: 'block',
+  fontSize: '13px',
+  fontWeight: '600',
+  color: '#4b5563',
+  marginBottom: '6px'
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('products')
 
@@ -33,39 +54,31 @@ export default function AdminDashboard() {
 
       <div style={{
         minHeight: 'calc(100vh - 70px)',
-        background: '#f5f6f8',
+        background: '#f4f6f8',
         padding: '40px 0'
       }}>
         <div className="container">
-          <div style={{ marginBottom: '30px' }}>
+          
+          {/* Header Section */}
+          <div style={{ marginBottom: '25px' }}>
             <h1 style={{
-              color: '#1a2332',
-              fontWeight: 'bold',
-              marginBottom: '8px',
-              fontSize: '28px'
+              color: '#111827',
+              fontWeight: '700',
+              marginBottom: '6px',
+              fontSize: '24px'
             }}>
-              {activeTab === 'products' ? 'Products Management' : 'Orders Management'}
+              {activeTab === 'products' ? 'Product Management' : 'Order Management'}
             </h1>
             <p style={{ color: '#6b7280', margin: 0, fontSize: '14px' }}>
               {activeTab === 'products'
-                ? 'Add, view, and delete products in your store.'
-                : 'Review and update the status of customer orders.'}
+                ? 'Manage your store inventory, add new items, and update stock.'
+                : 'Review incoming orders and update their delivery status.'}
             </p>
           </div>
 
           {activeTab === 'products' && <ProductsTab />}
           {activeTab === 'orders' && <OrdersTab />}
         </div>
-      </div>
-
-      <div style={{
-        background: '#1a2332',
-        color: '#c0c8d4',
-        textAlign: 'center',
-        padding: '20px',
-        fontSize: '13px'
-      }}>
-        Admin Panel · Cycle Store © 2026
       </div>
     </>
   )
@@ -147,121 +160,134 @@ function ProductsTab() {
     }
   }
 
-  const inputStyle = {
-    width: '100%',
-    padding: '12px',
-    border: '1.5px solid #ddd',
-    borderRadius: '8px',
-    outline: 'none',
-    fontSize: '14px',
-    marginBottom: '12px',
-    boxSizing: 'border-box'
-  }
-
   return (
     <div className="row">
+      {/* Form Column */}
       <div className="col-lg-4 mb-4">
         <div style={{
-          background: '#fff',
-          borderRadius: '16px',
-          padding: '25px',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.06)',
+          background: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          padding: '24px',
           position: 'sticky',
           top: '90px'
         }}>
-          <h3 style={{ color: '#1a2332', marginBottom: '20px', fontSize: '18px' }}>
-            ➕ Add New Product
-          </h3>
+          <h2 style={{ color: '#111827', marginBottom: '20px', fontSize: '16px', fontWeight: '600' }}>
+            Add New Product
+          </h2>
           <form onSubmit={handleSubmit}>
-            <input
-              style={inputStyle}
-              placeholder="Product Title *"
-              value={form.title}
-              onChange={e => setForm({ ...form, title: e.target.value })}
-              required
-            />
-            <textarea
-              style={{ ...inputStyle, resize: 'vertical' }}
-              rows="3"
-              placeholder="Description"
-              value={form.description}
-              onChange={e => setForm({ ...form, description: e.target.value })}
-            />
-            <input
-              style={inputStyle}
-              placeholder="Manufacture *"
-              value={form.manufacture}
-              onChange={e => setForm({ ...form, manufacture: e.target.value })}
-              required
-            />
-            <input
-              style={inputStyle}
-              type="number"
-              placeholder="Price *"
-              value={form.price}
-              onChange={e => setForm({ ...form, price: e.target.value })}
-              required
-              min="0"
-              step="0.01"
-            />
-            <input
-              style={inputStyle}
-              type="number"
-              placeholder="Stock *"
-              value={form.stock}
-              onChange={e => setForm({ ...form, stock: e.target.value })}
-              required
-              min="0"
-            />
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '13px',
-                color: '#666',
-                marginBottom: '5px',
-                fontWeight: '600'
-              }}>
-                Product Image (optional)
-              </label>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Product Title <span style={{color: '#ef4444'}}>*</span></label>
+              <input
+                style={inputStyle}
+                placeholder="e.g. Mountain Explorer"
+                value={form.title}
+                onChange={e => setForm({ ...form, title: e.target.value })}
+                required
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Manufacturer <span style={{color: '#ef4444'}}>*</span></label>
+              <input
+                style={inputStyle}
+                placeholder="e.g. Trek"
+                value={form.manufacture}
+                onChange={e => setForm({ ...form, manufacture: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="row">
+              <div className="col-6">
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={labelStyle}>Price ($) <span style={{color: '#ef4444'}}>*</span></label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    placeholder="0.00"
+                    value={form.price}
+                    onChange={e => setForm({ ...form, price: e.target.value })}
+                    required
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              <div className="col-6">
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={labelStyle}>Stock <span style={{color: '#ef4444'}}>*</span></label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    placeholder="0"
+                    value={form.stock}
+                    onChange={e => setForm({ ...form, stock: e.target.value })}
+                    required
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Description</label>
+              <textarea
+                style={{ ...inputStyle, resize: 'vertical' }}
+                rows="3"
+                placeholder="Product details..."
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={labelStyle}>Product Image</label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={e => setImage(e.target.files[0])}
-                style={{ fontSize: '14px', width: '100%' }}
+                style={{ fontSize: '13px', width: '100%', color: '#6b7280' }}
               />
               {image && (
-                <small style={{ color: '#2e7d32', display: 'block', marginTop: '5px' }}>
-                  ✓ {image.name}
+                <small style={{ color: '#10b981', display: 'block', marginTop: '6px', fontSize: '12px' }}>
+                  Selected: {image.name}
                 </small>
               )}
             </div>
+
             <button
               type="submit"
               disabled={submitting}
               style={{
                 width: '100%',
-                background: submitting ? '#ccc' : '#f7c17b',
-                color: '#fff',
+                background: submitting ? '#9ca3af' : '#325662',
+                color: '#ffffff',
                 border: 'none',
-                padding: '14px',
-                borderRadius: '8px',
-                fontWeight: 'bold',
+                padding: '12px',
+                borderRadius: '6px',
+                fontWeight: '600',
                 cursor: submitting ? 'not-allowed' : 'pointer',
-                fontSize: '15px'
+                fontSize: '14px',
+                transition: 'background 0.2s'
               }}
+              onMouseEnter={(e) => { if(!submitting) e.target.style.background = '#23404a' }}
+              onMouseLeave={(e) => { if(!submitting) e.target.style.background = '#325662' }}
             >
-              {submitting ? 'Adding...' : 'Add Product'}
+              {submitting ? 'Adding Product...' : 'Add Product'}
             </button>
           </form>
         </div>
       </div>
 
+      {/* Table Column */}
       <div className="col-lg-8">
         <div style={{
-          background: '#fff',
-          borderRadius: '16px',
-          padding: '25px',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.06)'
+          background: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          padding: '24px'
         }}>
           <div style={{
             display: 'flex',
@@ -269,111 +295,97 @@ function ProductsTab() {
             alignItems: 'center',
             marginBottom: '20px'
           }}>
-            <h3 style={{ color: '#1a2332', margin: 0, fontSize: '18px' }}>
-              📦 Products ({products.length})
-            </h3>
+            <h2 style={{ color: '#111827', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+              Inventory List
+            </h2>
             <button
               onClick={load}
               style={{
-                background: 'transparent',
-                border: '1.5px solid #ddd',
-                padding: '6px 14px',
+                background: '#ffffff',
+                border: '1px solid #d1d5db',
+                padding: '6px 12px',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '13px',
-                color: '#666'
+                color: '#374151',
+                fontWeight: '500'
               }}
+              onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
+              onMouseLeave={(e) => e.target.style.background = '#ffffff'}
             >
-              🔄 Refresh
+              Refresh List
             </button>
           </div>
 
           {loading ? <Loader /> : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
-                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Image</th>
-                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Title</th>
-                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Manufacture</th>
-                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Price</th>
-                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Stock</th>
-                    <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Actions</th>
+                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Image</th>
+                    <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Product</th>
+                    <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Manufacturer</th>
+                    <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'right' }}>Price</th>
+                    <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'right' }}>Stock</th>
+                    <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.map(p => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                      <td style={{ padding: '12px 8px' }}>
+                    <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '12px 16px' }}>
                         {p.image ? (
                           <img
                             src={p.image}
                             alt={p.title}
-                            style={{
-                              width: '50px',
-                              height: '50px',
-                              objectFit: 'cover',
-                              borderRadius: '6px'
-                            }}
+                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                           />
                         ) : (
                           <div style={{
-                            width: '50px',
-                            height: '50px',
-                            background: '#eee',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#bbb',
-                            fontSize: '20px'
-                          }}>
-                            📷
-                          </div>
+                            width: '40px',
+                            height: '40px',
+                            background: '#f3f4f6',
+                            borderRadius: '4px',
+                            border: '1px solid #e5e7eb'
+                          }} />
                         )}
                       </td>
-                      <td style={{ padding: '12px 8px', fontWeight: 'bold', color: '#1a2332' }}>
+                      <td style={{ padding: '12px 16px', fontWeight: '500', color: '#111827' }}>
                         {p.title}
                       </td>
-                      <td style={{ padding: '12px 8px', color: '#666' }}>
+                      <td style={{ padding: '12px 16px', color: '#4b5563' }}>
                         {p.manufacture || '—'}
                       </td>
-                      <td style={{ padding: '12px 8px', color: '#1a2332', fontWeight: '600' }}>
-                        ${p.price}
+                      <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '500', textAlign: 'right' }}>
+                        ${Number(p.price).toFixed(2)}
                       </td>
-                      <td style={{ padding: '12px 8px' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '12px',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
                           fontSize: '12px',
-                          fontWeight: 'bold',
-                          background: p.stock > 0 ? '#e8f5e9' : '#ffebee',
-                          color: p.stock > 0 ? '#2e7d32' : '#c62828'
+                          fontWeight: '600',
+                          border: `1px solid ${p.stock > 0 ? '#a7f3d0' : '#fecaca'}`,
+                          background: p.stock > 0 ? '#ecfdf5' : '#fef2f2',
+                          color: p.stock > 0 ? '#047857' : '#b91c1c'
                         }}>
-                          {p.stock ?? '?'}
+                          {p.stock ?? 0}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 8px' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <button
                           onClick={() => handleDelete(p.id, p.title)}
                           style={{
                             background: 'transparent',
-                            color: '#c62828',
-                            border: '1.5px solid #c62828',
-                            padding: '5px 12px',
-                            borderRadius: '6px',
+                            color: '#ef4444',
+                            border: 'none',
                             cursor: 'pointer',
                             fontSize: '13px',
-                            fontWeight: 'bold'
+                            fontWeight: '600',
+                            padding: '4px 8px'
                           }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = '#c62828'
-                            e.currentTarget.style.color = '#fff'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = 'transparent'
-                            e.currentTarget.style.color = '#c62828'
-                          }}
+                          onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                          onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
                         >
                           Delete
                         </button>
@@ -383,9 +395,9 @@ function ProductsTab() {
                 </tbody>
               </table>
               {products.length === 0 && (
-                <p style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-                  No products yet. Add your first product using the form.
-                </p>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#6b7280', fontSize: '14px' }}>
+                  No products found in inventory.
+                </div>
               )}
             </div>
           )}
@@ -441,23 +453,23 @@ function OrdersTab() {
 
   const getStatusBadgeColor = (status) => {
     const colors = {
-      pending: { bg: '#fff3cd', text: '#856404' },
-      preparing: { bg: '#cce5ff', text: '#004085' },
-      'go out': { bg: '#d4edda', text: '#155724' },
-      delivered: { bg: '#d1ecf1', text: '#0c5460' },
-      completed: { bg: '#d4edda', text: '#155724' }
+      pending: { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
+      preparing: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' },
+      'go out': { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' },
+      delivered: { bg: '#ecfdf5', text: '#047857', border: '#a7f3d0' },
+      completed: { bg: '#f3f4f6', text: '#374151', border: '#e5e7eb' }
     }
-    return colors[status] || { bg: '#e2e3e5', text: '#383d41' }
+    return colors[status] || { bg: '#f3f4f6', text: '#374151', border: '#e5e7eb' }
   }
 
   if (loading) return <Loader />
 
   return (
     <div style={{
-      background: '#fff',
-      borderRadius: '16px',
-      padding: '25px',
-      boxShadow: '0 4px 15px rgba(0,0,0,0.06)'
+      background: '#ffffff',
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      padding: '24px'
     }}>
       <div style={{
         display: 'flex',
@@ -465,69 +477,73 @@ function OrdersTab() {
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <h3 style={{ color: '#1a2332', margin: 0, fontSize: '18px' }}>
-          🧾 All Orders ({orders.length})
-        </h3>
+        <h2 style={{ color: '#111827', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+          Recent Orders
+        </h2>
         <button
           onClick={load}
           style={{
-            background: 'transparent',
-            border: '1.5px solid #ddd',
-            padding: '6px 14px',
+            background: '#ffffff',
+            border: '1px solid #d1d5db',
+            padding: '6px 12px',
             borderRadius: '6px',
             cursor: 'pointer',
             fontSize: '13px',
-            color: '#666'
+            color: '#374151',
+            fontWeight: '500'
           }}
+          onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
+          onMouseLeave={(e) => e.target.style.background = '#ffffff'}
         >
-          🔄 Refresh
+          Refresh List
         </button>
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
-              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Order</th>
-              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Date</th>
-              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Items</th>
-              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Total</th>
-              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Current Status</th>
-              <th style={{ padding: '12px 8px', color: '#888', fontSize: '13px' }}>Change Status</th>
+            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
+              <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Order ID</th>
+              <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Date</th>
+              <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'center' }}>Items</th>
+              <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'right' }}>Total</th>
+              <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Status</th>
+              <th style={{ padding: '12px 16px', color: '#6b7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Action</th>
             </tr>
           </thead>
           <tbody>
             {orders.map(o => {
               const badge = getStatusBadgeColor(o.status)
               return (
-                <tr key={o.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '12px 8px', fontWeight: 'bold', color: '#1a2332' }}>
+                <tr key={o.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '12px 16px', fontWeight: '600', color: '#111827' }}>
                     #{o.id}
                   </td>
-                  <td style={{ padding: '12px 8px', fontSize: '13px', color: '#888' }}>
-                    {new Date(o.created_at).toLocaleString()}
+                  <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>
+                    {new Date(o.created_at).toLocaleDateString()} <span style={{color:'#9ca3af'}}>{new Date(o.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                   </td>
-                  <td style={{ padding: '12px 8px', color: '#666' }}>
+                  <td style={{ padding: '12px 16px', color: '#4b5563', textAlign: 'center' }}>
                     {o.item_count ?? '—'}
                   </td>
-                  <td style={{ padding: '12px 8px', color: '#1a2332', fontWeight: '600' }}>
+                  <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '600', textAlign: 'right' }}>
                     ${Number(o.total || 0).toFixed(2)}
                   </td>
-                  <td style={{ padding: '12px 8px' }}>
+                  <td style={{ padding: '12px 16px' }}>
                     <span style={{
-                      padding: '5px 12px',
-                      borderRadius: '12px',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
                       fontSize: '12px',
-                      fontWeight: 'bold',
+                      fontWeight: '600',
                       background: badge.bg,
                       color: badge.text,
+                      border: `1px solid ${badge.border}`,
                       textTransform: 'capitalize',
                       display: 'inline-block'
                     }}>
                       {o.status_display || o.status}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 8px' }}>
+                  <td style={{ padding: '12px 16px' }}>
                     <select
                       value={o.status}
                       onChange={e => handleStatusChange(o, e.target.value)}
@@ -535,12 +551,14 @@ function OrdersTab() {
                       style={{
                         padding: '6px 10px',
                         borderRadius: '6px',
-                        border: '1.5px solid #ddd',
+                        border: '1px solid #d1d5db',
                         fontSize: '13px',
                         textTransform: 'capitalize',
                         cursor: updatingId === o.id ? 'not-allowed' : 'pointer',
                         opacity: updatingId === o.id ? 0.6 : 1,
-                        background: '#fff'
+                        background: '#ffffff',
+                        outline: 'none',
+                        color: '#374151'
                       }}
                     >
                       {STATUS_OPTIONS.map(s => (
@@ -554,9 +572,9 @@ function OrdersTab() {
           </tbody>
         </table>
         {orders.length === 0 && (
-          <p style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-            No orders yet. Orders will appear here once customers start purchasing.
-          </p>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#6b7280', fontSize: '14px' }}>
+            No orders found.
+          </div>
         )}
       </div>
     </div>
