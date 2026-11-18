@@ -14,16 +14,19 @@ class Order (TimeStampedModel):
     # product_quantity = models.IntegerField(null=False, blank=False)
 
     class Status(models.TextChoices):
+        PROCESSING = "processing" , "Processing"
         PENDING = "pending", "Pending"
         COMPLETE = "complete", "Complete"
+        FAILED = "failed" , "Failed"
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.PENDING,
+        default=Status.PROCESSING,
         null=False,
         blank=False
     )
 
+    error_message = models.CharField(max_length=255 , blank=True , null=True)
     user_id = models.PositiveBigIntegerField(db_index=True)
     
     # user = models.ForeignKey(

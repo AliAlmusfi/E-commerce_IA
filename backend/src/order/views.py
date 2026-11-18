@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
 from rest_framework.throttling import UserRateThrottle , ScopedRateThrottle 
 
-from .services import create_order , update_order_status
+from .services import  update_order_status , initiate_order_processing
 from django.core.exceptions import ValidationError , PermissionDenied
 
 from user.public import get_users_map
@@ -140,6 +140,19 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        order = initiate_order_processing(
+            user_id=request.user.id,
+            user_email=request.user.email,
+            items_data=serializer.validated_data["items"]
+        )
+        return Response(
+            {
+                "order_id": order.id,
+                "status": "processing",
+                "message": "We are processing your order. Please check your email for confirmation."
+            },
+            status=status.HTTP_202_ACCEPTED
+        )
         # try:
         order = create_order(user = request.user , items_data=serializer.validated_data["items"])
         # except InventoryServiceError as exc:

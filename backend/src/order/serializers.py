@@ -57,6 +57,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = [
             "id", "user_id", "user_email", "status", "status_display",
             "total", "items", "created_at", "updated_at",
+            "error_message"
         ]
         read_only_fields = fields
 
