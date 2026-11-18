@@ -16,6 +16,9 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 
+from corsheaders.defaults import default_headers
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +43,16 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_EXPOSE_HEADERS = ['ETag']
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'if-none-match',
+    'if-match',
+]
+
+
+
 
 AUTH_USER_MODEL = 'user.User'
 
@@ -70,10 +83,9 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'tools.middleware.ETagCacheHeadersMiddleware', # own
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # own
-    'tools.db.middleware.ReadYourWritesMiddleware',
-    # end own
+    'tools.db.middleware.ReadYourWritesMiddleware', # own
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
