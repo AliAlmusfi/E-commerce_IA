@@ -2,7 +2,7 @@ from .models import Product
 
 from tools.grpc.client import InventoryClient #, InventoryServiceError
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
-
+from tools.db.db_router import WRITE_DB
 
 
 def create_product(user_id, data:dict)->Product:
@@ -10,7 +10,7 @@ def create_product(user_id, data:dict)->Product:
     product = None
     stock = data.pop('stock')
 
-    product = Product.objects.create(**data)
+    product = Product.objects.db_manager(WRITE_DB).create(**data)
     if product is None:
         raise Exception("can't create product !")
 
@@ -34,25 +34,26 @@ def create_product(user_id, data:dict)->Product:
     return product
 
 def delete_product(id:int):
-    Product.objects.filter(id=id).delete()
+    Product.objects.db_manager(WRITE_DB).filter(id=id).delete()
 
 def patch_product(id, user_id, data:dict)->Product:
-    product = Product.objects.get(id)
+    product = Product.objects.db_manager(WRITE_DB).get(id)
+ 
     if product is None:
         raise BusinessRuleViolation(f"Product {id} is not found!", code="NOT_FOUND", status_code=404)
 
-    if data['title']:
-        product.title = data['title']
-    if data['description']:
-        product.description = data['description']
-    if data['manufacturer']:
-        product.manufacturer = data['manufacturer']
-    if data['price']:
-        product.price = data['price']
-    if data['image']:
-        product.image = data['image']
+    if data.get('title'):
+        product.title = data.get('title')
+    if data.get('description'):
+        product.description = data.get('description')
+    if data.get('manufacturer'):
+        product.manufacturer = data.get('manufacturer')
+    if data.get('price'):
+        product.price = data.get('price')
+    if data.get('image'):
+        product.image = data.get('image')
 
-    product.save()
+    product.save(using=WRITE_DB)
 
     return product
 
@@ -61,8 +62,8 @@ def get_stock(id, user_id)-> int:
     try:
         client = InventoryClient()
         stock = client.get_product_stock(
-            user_id=user_id,
-            product_id=id
+            user_id=int(user_id),
+            product_id=int(id)
         )
         return stock
     except InventoryServiceError:
@@ -72,11 +73,10 @@ def update_stock(id, user_id, amount)->bool:
     try:
         client = InventoryClient()
         response = client.update_product_quantity(
-            user_id=user_id,
-            product_id=id,
-            amount=amount
+            user_id=int(user_id),
+            product_id=int(id),
+            amount=int(amount)
         )
-        if not response['success']: return False
-        return response['success']
+        return response['success'] or False
     except InventoryServiceError:
         raise

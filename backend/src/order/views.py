@@ -16,14 +16,18 @@ from user.public import get_users_map
 
 
 from drf_spectacular.utils import extend_schema , extend_schema_view
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerializer, OrderStatusUpdateSerializer
 
 from tools.grpc.client import InventoryServiceError
+from tools.caching import do_cache, get_cache_key, get_cached_response
 
 from product.public import get_products_map
 
+
+MODULE = "order"
 
 
 class IsOwnerOrStaff(permissions.BasePermission):
@@ -44,6 +48,11 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrStaff]
 
     throttle_classes = [UserRateThrottle]
+    
+    pagination_class = PageNumberPagination
+    pagination_class.page_size=50
+    pagination_class.max_page_size=120
+    pagination_class.page_size_query_param='size'
 
     #for more control on it if I want 
     # throttle_classes = [ScopedRateThrottle]
@@ -76,8 +85,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
         )
         # avoid duplicate rows from search on reverse relation
-        if "search" in self.request.query_params:
-            qs = qs.distinct()
+        # if "search" in self.request.query_params:
+        #     qs = qs.distinct()
         if user.is_staff:
             return qs
         return qs.filter(user_id=user.id)
@@ -198,6 +207,65 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(OrderSerializer(updated_status, context=self.get_serializer_context()).data)
 
 
+    def list(self, request, *args, **kwargs):
+        endpoint = self.action
+        cache_timeout_minutes = 10
+        
+        cache_key = get_cache_key(
+            module= MODULE,
+            endpoint= endpoint,
+            user_id= str(request.user.id),
+            is_staff= str(request.user.is_staff),
+            page= request.query_params.get('page', '1')
+        )
+        cached_response = get_cached_response(cache_key)
+        if cached_response is not None:
+            return cached_response
+        
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response:Response = self.get_paginated_response(serializer.data)
+            do_cache(
+                cache_key= cache_key,
+                data= response.data,
+                timeout= 60 * cache_timeout_minutes
+            )
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        do_cache(
+            cache_key= cache_key,
+            data= serializer.data,
+            timeout= 60 * cache_timeout_minutes
+        )
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk, *args, **kwargs):
+        endpoint = self.action
+        cache_timeout_minutes = 10
+        
+        cache_key = get_cache_key(
+            module= MODULE,
+            endpoint= endpoint,
+            wildcard_pk=pk,
+            user_id= str(request.user.id),
+            is_staff= str(request.user.is_staff)
+        )
+        cached_response = get_cached_response(cache_key)
+        if cached_response is not None:
+            return cached_response
+        
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        do_cache(
+            cache_key= cache_key,
+            data= serializer.data,
+            timeout= 60 * cache_timeout_minutes
+        )
+        return Response(serializer.data)
  
     # ─── Admin ────────────────────────────────────────────────
 

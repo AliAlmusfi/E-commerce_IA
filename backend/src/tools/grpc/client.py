@@ -184,7 +184,7 @@ class InventoryClient:
 
         try:
             with grpc.insecure_channel(self.host) as channel:
-                resp = self._stub(channel).UpdateProductQuantity(
+                resp = self._stub(channel).CreateProductStorage(
                     CreateProductStorageRequest(
                         user_id=user_id,
                         product_id=product_id,

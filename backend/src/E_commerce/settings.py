@@ -71,6 +71,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # own
+    'tools.db.middleware.ReadYourWritesMiddleware',
+    # end own
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -101,10 +104,6 @@ WSGI_APPLICATION = 'e_commerce.wsgi.application'
 load_dotenv(BASE_DIR / '.env') 
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
     'default': {
         'ENGINE': os.getenv('DATABASE_ENGINE' , 'django.db.backends.mysql'), 
         'NAME': os.getenv('DATABASE_NAME' , Path(__file__).resolve().parent.name),
@@ -115,6 +114,35 @@ DATABASES = {
         "OPTIONS": {
             "init_command": "SET default_storage_engine=INNODB",
         },
+    },
+    "replica": {
+        'ENGINE': os.getenv('REPLICA_DATABASE_ENGINE' , 'django.db.backends.mysql'), 
+        'NAME': os.getenv('REPLICA_DATABASE_NAME' , Path(__file__).resolve().parent.name),
+        'USER': os.getenv('REPLICA_DATABASE_USER' , 'root'),
+        'PASSWORD': os.getenv('REPLICA_DATABASE_PASSWORD' , ''),
+        'HOST': os.getenv('REPLICA_DATABASE_HOST' , 'django-replica-db'),
+        'PORT': os.getenv('REPLICA_DATABASE_PORT' , '3306'),
+        # Optional: Tell Django's test runner this mirrors 'default'
+        "TEST": {
+            "MIRROR": "default",
+        },
+    },
+}
+DATABASE_ROUTERS = ["tools.db.db_router.PrimaryReplicaRouter"]
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/1"), # Use DB 1 for caching
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # Recommended for production: connection pooling and timeouts
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "CONNECTION_POOL_KWARGS": {"max_connections": 100, "retry_on_timeout": True},
+        },
+        "KEY_PREFIX": "drf", # Optional: avoids key collisions
     }
 }
 
@@ -190,7 +218,14 @@ REST_FRAMEWORK= {
         'anon': '20/minute',  # For unauthenticated users
         'user': '100/hour'    # For authenticated users
     },
-    'EXCEPTION_HANDLER': 'tools.error_handler.handlers.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'tools.error_handler.exceptions.custom_exception_handler',
+}
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    # 'USER_ID_FIELD': 'id',        # Model field to use as user identifier
+    # 'USER_ID_CLAIM': 'user_id',   # Default claim name in token payload
+    # 'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer', # handle email as username
 }
 
 
@@ -224,3 +259,22 @@ INVENTORY_GRPC_HOST = os.getenv('INVENTORY_GRPC_HOST' , '')
 #     'ALLOWED_VERSIONS': ['v1', 'v2'], # List all supported versions
 #     'VERSION_PARAM': 'version',
 # }
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "sql": {"format": "%(asctime)s %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "sql"},
+    },
+    "loggers": {
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}

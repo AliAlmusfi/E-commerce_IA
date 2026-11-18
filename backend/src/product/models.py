@@ -11,7 +11,8 @@ def product_image_upload_path(instance , filename):
     return f'products/{instance.id}/{filename}'
 class Product(TimeStampedModel):
     class Meta:
-        db_table = 'product'
+        db_table = 'products'
+        ordering = ["id"]
 
     title = models.CharField(max_length=20 , null= False , blank=False, unique=True)
     manufacturer = models.CharField(max_length=20 , null= False , blank=False)

@@ -7,7 +7,8 @@ from e_commerce import settings
 
 class Order (TimeStampedModel):
     class Meta:
-        db_table = 'order'
+        db_table = 'orders'
+        ordering = ['id']
 
     total  = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     # product_quantity = models.IntegerField(null=False, blank=False)

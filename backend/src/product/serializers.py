@@ -19,8 +19,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'id': {'read_only': True},
             'title': {'required': True}, 
             'manufacturer': {'required': True}, 
-            'price': {'required': True}, 
-            'stock': {'required': True, 'write_only':True}, 
+            'price': {'required': True}
         }
 
     def validate_price(self, value):
@@ -31,10 +30,10 @@ class ProductSerializer(serializers.ModelSerializer):
 
         return value
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['stock'] = self._get_stock(instance)
-        return data
+    # def to_representation(self, instance):
+    #     data = super().to_representation(instance)
+    #     data['stock'] = self._get_stock(instance)
+    #     return data
 
     def _get_stock(self, instance):
         return get_stock(
@@ -55,19 +54,19 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             'id': {'read_only': True},
-            'title': {'read_only': True},
-            'description': {'read_only': True},
-            'manufacturer': {'read_only': True},
-            'price': {'read_only': True},
-            'image': {'read_only': True},
+            'title': {'required': False},
+            'description': {'required': False},
+            'manufacturer': {'required': False},
+            'price': {'required': False},
+            'image': {'required': False},
         }
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
         if ( 
-            (not attrs['title']) and (not attrs['description'])
-            and (not attrs['manufacturer']) and (not attrs['price'])
-            and (not attrs['image'])
+            (not attrs.get('title')) and (not attrs.get('description'))
+            and (not attrs.get('manufacturer')) and (not attrs.get('price'))
+            and (not attrs.get('image'))
         ):
             raise serializers.ValidationError(
                 "request does not contain any valid data to update on product ! no (title, manufacturer, description, price, image) found !"
@@ -76,9 +75,9 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
 
 
 class ProductStockSerializer(serializers.Serializer):
-    amount = serializers.IntegerField(required=True)
-    class Meta:
-        fields = ['amount']
-        extra_kwargs = {
-            'amount': {'required': True},
-        }
+    amount = serializers.IntegerField(required=True, min_value=1)
+    # class Meta:
+    #     fields = ['amount']
+    #     extra_kwargs = {
+    #         'amount': {'required': True},
+    #     }
