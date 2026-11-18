@@ -17,10 +17,8 @@ export const createProduct = async (formData) => {
   return data
 }
 
-export const updateProduct = async (id, formData) => {
-  const { data } = await api.patch(`/products/${id}/`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+export const updateStock = async (id, amount) => {
+  const { data } = await api.patch(`/products/${id}/update_stock/`, { amount })
   return data
 }
 

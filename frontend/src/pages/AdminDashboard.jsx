@@ -7,7 +7,8 @@ import { useNotification } from '../context/NotificationContext'
 import {
   fetchProducts,
   createProduct,
-  deleteProduct
+  deleteProduct,
+  updateStock
 } from '../features/products/services/productService'
 import {
   fetchAllOrders,
@@ -19,7 +20,7 @@ const STATUS_OPTIONS = ['pending', 'preparing', 'go out', 'delivered', 'complete
 const EMPTY_PRODUCT = {
   title: '',
   description: '',
-  manufacture: '',
+  manufacturer: '',
   price: '',
   stock: ''
 }
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
         padding: '40px 0'
       }}>
         <div className="container">
-          
+
           {/* Header Section */}
           <div style={{ marginBottom: '25px' }}>
             <h1 style={{
@@ -91,11 +92,13 @@ function ProductsTab() {
   const [form, setForm] = useState(EMPTY_PRODUCT)
   const [image, setImage] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [stockEdit, setStockEdit] = useState(null)
+  const [updatingStockId, setUpdatingStockId] = useState(null)
 
   const load = async () => {
     setLoading(true)
     try {
-      const data = await fetchProducts({ page_size: 100 })
+      const data = await fetchProducts({ size: 100 })
       setProducts(data.results || data)
     } catch (err) {
       showError('Failed to load products.')
@@ -112,8 +115,8 @@ function ProductsTab() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!form.title || !form.manufacture || !form.price || !form.stock) {
-      showError('Title, manufacture, price, and stock are required.')
+    if (!form.title || !form.manufacturer || !form.price || !form.stock) {
+      showError('Title, manufacturer, price, and stock are required.')
       return
     }
 
@@ -122,7 +125,7 @@ function ProductsTab() {
       const fd = new FormData()
       fd.append('title', form.title)
       if (form.description) fd.append('description', form.description)
-      fd.append('manufacture', form.manufacture)
+      fd.append('manufacturer', form.manufacturer)
       fd.append('price', form.price)
       fd.append('stock', form.stock)
       if (image) fd.append('image', image)
@@ -160,6 +163,33 @@ function ProductsTab() {
     }
   }
 
+  const handleStockSave = async (product) => {
+    if (!stockEdit) return
+    const amount = Number(stockEdit.amount)
+    if (!Number.isFinite(amount) || amount === 0) {
+      showError('Enter a non-zero amount (use negative to reduce).')
+      return
+    }
+    setUpdatingStockId(product.id)
+    try {
+      await updateStock(product.id, amount)
+      success(`Stock for "${product.title}" updated.`)
+      setStockEdit(null)
+      await load()
+    } catch (err) {
+      const data = err?.response?.data
+      let msg = 'Failed to update stock.'
+      if (data && typeof data === 'object') {
+        const firstKey = Object.keys(data)[0]
+        const firstVal = data[firstKey]
+        msg = Array.isArray(firstVal) ? `${firstKey}: ${firstVal[0]}` : `${firstKey}: ${firstVal}`
+      }
+      showError(msg)
+    } finally {
+      setUpdatingStockId(null)
+    }
+  }
+
   return (
     <div className="row">
       {/* Form Column */}
@@ -176,7 +206,7 @@ function ProductsTab() {
             Add New Product
           </h2>
           <form onSubmit={handleSubmit}>
-            
+
             <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Product Title <span style={{color: '#ef4444'}}>*</span></label>
               <input
@@ -193,8 +223,8 @@ function ProductsTab() {
               <input
                 style={inputStyle}
                 placeholder="e.g. Trek"
-                value={form.manufacture}
-                onChange={e => setForm({ ...form, manufacture: e.target.value })}
+                value={form.manufacturer}
+                onChange={e => setForm({ ...form, manufacturer: e.target.value })}
                 required
               />
             </div>
@@ -338,7 +368,7 @@ function ProductsTab() {
                           <img
                             src={p.image}
                             alt={p.title}
-                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb', overflow: 'visible' }}
                           />
                         ) : (
                           <div style={{
@@ -354,23 +384,86 @@ function ProductsTab() {
                         {p.title}
                       </td>
                       <td style={{ padding: '12px 16px', color: '#4b5563' }}>
-                        {p.manufacture || '—'}
+                        {p.manufacturer || '—'}
                       </td>
                       <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '500', textAlign: 'right' }}>
                         ${Number(p.price).toFixed(2)}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          border: `1px solid ${p.stock > 0 ? '#a7f3d0' : '#fecaca'}`,
-                          background: p.stock > 0 ? '#ecfdf5' : '#fef2f2',
-                          color: p.stock > 0 ? '#047857' : '#b91c1c'
-                        }}>
-                          {p.stock ?? 0}
-                        </span>
+                        {stockEdit?.id === p.id ? (
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <input
+                              type="number"
+                              autoFocus
+                              value={stockEdit.amount}
+                              onChange={e => setStockEdit({ ...stockEdit, amount: e.target.value })}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') { e.preventDefault(); handleStockSave(p) }
+                                if (e.key === 'Escape') { setStockEdit(null) }
+                              }}
+                              placeholder="±0"
+                              style={{
+                                width: '72px',
+                                padding: '4px 6px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                textAlign: 'right',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                            <button
+                              onClick={() => handleStockSave(p)}
+                              disabled={updatingStockId === p.id}
+                              style={{
+                                background: updatingStockId === p.id ? '#9ca3af' : '#325662',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                cursor: updatingStockId === p.id ? 'not-allowed' : 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }}
+                            >
+                              {updatingStockId === p.id ? '…' : 'Save'}
+                            </button>
+                            <button
+                              onClick={() => setStockEdit(null)}
+                              style={{
+                                background: 'transparent',
+                                color: '#6b7280',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                padding: '2px 4px'
+                              }}
+                              title="Cancel"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setStockEdit({ id: p.id, amount: '' })}
+                            title="Click to update stock"
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              border: `1px solid ${p.stock > 0 ? '#a7f3d0' : '#fecaca'}`,
+                              background: p.stock > 0 ? '#ecfdf5' : '#fef2f2',
+                              color: p.stock > 0 ? '#047857' : '#b91c1c'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = p.stock > 0 ? '#d1fae5' : '#fee2e2'}
+                            onMouseLeave={e => e.currentTarget.style.background = p.stock > 0 ? '#ecfdf5' : '#fef2f2'}
+                          >
+                            {p.stock ?? 0}
+                          </button>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <button

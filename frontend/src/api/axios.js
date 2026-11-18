@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -16,7 +16,6 @@ const refreshApi = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   
-  // تحديث الفحص ليشمل /v1/users/register/
   const isAuthEndpoint = 
     config.url?.includes('/users/token/') || 
     config.url?.includes('/users/register/')
