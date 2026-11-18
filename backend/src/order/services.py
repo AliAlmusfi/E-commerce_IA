@@ -5,86 +5,110 @@ from django.db import transaction
 from decimal import Decimal
 from product.public import get_products_map
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
-from tools.db.db_router import WRITE_DB
+# from .tasks import send_order_confirmation_email
+from user.public import get_users_map
+# from .tasks import process_order_async
 
 
 
-def create_order(user, items_data: list[dict]) -> Order:
+def initiate_order_processing(user_id: int, user_email: str, items_data: list[dict]) -> Order:
+    
+    from .tasks import process_order_async
+    # 1. Create the shell order
+    order = Order.objects.create(
+        user_id=user_id, 
+        status=Order.Status.PROCESSING
+    )
+
+
+    transaction.on_commit(
+        lambda: process_order_async.delay(
+            order_id=order.id,
+            items_data=items_data,
+            user_id=user_id,
+            user_email=user_email
+        )
+    )
+
+    return order
+
+
+def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> Order:
 
     client = InventoryClient()
     products = {}
-    for item in items_data:
-        pid = item['product_id']
-        product = client.get_product_stock(pid , user.id)
-        product_public = get_products_map(item["product_id"])
-        if product is None :
-            raise BusinessRuleViolation(f"Product {pid} does not exist.", code="PRODUCT_NOT_FOUND", status_code=404)
-        if product['stock'] < item['quantity']:
-            #TODO after doing the public.py add it to the product , just get the product info from it like the title
-            title = getattr(product_public, 'title', pid) 
-            raise BusinessRuleViolation(
-                f"Product '{title}' has only {product['stock']} in stock.",
-                code="OUT_OF_STOCK"
-            )
-        products[pid] = product
+    try:
+            
+        for item in items_data:
+            pid = item['product_id']
+            stock = client.get_product_stock(pid, user_id)
+            product_public = get_products_map([pid])
+            
+            if stock is None:
+                raise BusinessRuleViolation(f"Product {pid} does not exist.")
+            if stock < item['quantity']:
+                title = getattr(product_public, 'title', pid) 
+                raise BusinessRuleViolation(f"Product '{title}' has only {stock} in stock.")
+            products[pid] = stock
 
+        result = client.reserve_order(
+            items=[(item['product_id'], item['quantity']) for item in items_data],
+            user_id=user_id
+        )
 
-    result = client.reserve_order(
-        item=[(item['product_id'] , item['quantity']) for item in items_data],
-        user_id=user.id
-    )
-
-    if not result['success']:
-        _raise_reservation_failure(client, items_data, products , user)
+    except InventoryServiceError :
+        # print("//////////////////////////////////////////////////////////////////////")
+        # print(order.id)
+        # print("//////////////////////////////////////////////////////////////////////")
+        # Order.objects.filter(id=order.id).delete()
+        # order.delete()
+        _release_reserved(client , items_data , user_id)
+        raise 
+    except Exception:
+        raise
+    # if not result['success']:
+    #     _raise_reservation_failure(client, items_data, products, user_id)
 
     try:
         with transaction.atomic():
-            order = Order.objects.db_manager(WRITE_DB).create(user_id = user.id)
             total = Decimal("0.00")
-
             for item in items_data:
-                product_public = get_products_map(item["product_id"])
-                
-                pid = products["product_id"]
-        #TODO   unit_price =  add this from the public.py from the product 
-                unit_price = product_public.price
+                pid = item["product_id"]
+                product_public = get_products_map([pid])
+                unit_price = product_public.get(pid).price
                 qty = item["quantity"]
-                OrderItem.objects.db_manager(WRITE_DB).create(
+                
+                OrderItem.objects.create(
                     order=order,
-                    product_id=item["product_id"],
-                    # product_title=product["title"],             # snapshot
-                    # product_manufacturer=product["manufacturer"],
-                    # product_image=product["image"],
+                    product_id=pid,
                     quantity=qty,
                     unit_price=unit_price,
                 )
                 total += unit_price * qty
 
             order.total = total
-            order.save(update_fields=["total"], using=WRITE_DB)
-
-            return order
+            order.save(update_fields=["total"]) 
+            
     except Exception:
-        
-        _release_reserved(client, items_data , user)
+        _release_reserved(client, items_data, user_id)
         raise   
 
 
-def _raise_reservation_failure(client, items_data, products , user):
-    for item in items_data:
-        product_public = get_products_map(item["product_id"])
-        pid = item["product_id"]
-        current = client.get_product_stock(pid , user.id)
-        if current is None:
-            raise BusinessRuleViolation( f"Product {pid} is no longer available.")
-        if current < item["quantity"]:
-            #TODO get the title
-            title = getattr(get_products_map(pid), 'title', pid)
-            raise BusinessRuleViolation(f"Product '{title}' has only {current} in stock.")
-    raise BusinessRuleViolation("Could not reserve stock. Please try again.", code="CONCURRENT_ORDER")
+# def _raise_reservation_failure(client, items_data, products , user):
+#     for item in items_data:
+#         pid = item["product_id"]
+#         product_public = get_products_map([pid])
+#         current = client.get_product_stock(pid , user.id)
+#         if current is None:
+#             raise BusinessRuleViolation( f"Product {pid} is no longer available.")
+#         if current < item["quantity"]:
+#             #TODO get the title
+#             title = getattr(get_products_map([pid]), 'title', pid)
+#             raise BusinessRuleViolation(f"Product '{title}' has only {current} in stock.")
+#     raise BusinessRuleViolation("Could not reserve stock. Please try again.")
 
 
-def _release_reserved(client, items_data , user):
+def _release_reserved(client, items_data , user_id:int):
 
     import logging
     log = logging.getLogger(__name__)
@@ -92,7 +116,7 @@ def _release_reserved(client, items_data , user):
     for item in items_data:
         pid, qty = item["product_id"], item["quantity"]
         try:
-            result = client.update_product_quantity(pid, amount=qty , user_id=user.id)
+            result = client.update_product_quantity(pid, amount=qty , user_id=user_id)
             if not result["success"]:
                 log.error("Failed to release stock: product=%s qty=%s", pid, qty)
         except Exception as e:
@@ -124,5 +148,5 @@ def update_order_status(user , order:Order , new_status: str) ->Order:
         })
 
     order.status = new_status
-    order.save(update_fields=['status'], using=WRITE_DB)
+    order.save(update_fields=['status'])
     return order
