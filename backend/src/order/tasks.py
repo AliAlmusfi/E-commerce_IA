@@ -5,12 +5,14 @@ from .models import Order
 from .services import process_order_logic
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
 
+from tools.db.db_router import WRITE_DB
 logger = logging.getLogger(__name__)
 
 @shared_task(bind=True , max_retries=3 , default_retry_delay=10)
 def process_order_async(self, order_id, items_data, user_id ,user_email):
+
     try:
-        order = Order.objects.get(id=order_id)
+        order = Order.objects.db_manager(WRITE_DB).get(id=order_id)
     except Order.DoesNotExist:
         logger.error(f"Order {order_id} not found in database.")
         return
@@ -21,7 +23,7 @@ def process_order_async(self, order_id, items_data, user_id ,user_email):
         
 
         order.status = Order.Status.PENDING
-        order.save(update_fields=['status'])
+        order.save(update_fields=['status'], using=WRITE_DB)
 
 
         from django.conf import settings
@@ -45,7 +47,7 @@ def process_order_async(self, order_id, items_data, user_id ,user_email):
         
         order.status = Order.Status.FAILED
         order.error_message = exc.message
-        order.save(update_fields=['status', 'error_message'])
+        order.save(update_fields=['status', 'error_message'], using=WRITE_DB)
 
         send_mail(
             'Order Failed',
