@@ -12,6 +12,7 @@ from user.public import get_users_map
 
 
 def initiate_order_processing(user_id: int, user_email: str, items_data: list[dict]) -> Order:
+    
     from .tasks import process_order_async
     # 1. Create the shell order
     order = Order.objects.create(
