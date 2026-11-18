@@ -9,9 +9,6 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True , max_retries=3 , default_retry_delay=10)
 def process_order_async(self, order_id, items_data, user_id ,user_email):
-    # print("//////////////////////////////////////////////////////////////////////")
-    # print(user_email)
-    # print("//////////////////////////////////////////////////////////////////////")
     try:
         order = Order.objects.get(id=order_id)
     except Order.DoesNotExist:
