@@ -53,3 +53,8 @@ def invalidate_cache(module, sender, instance, **kwargs):
     
     cache.delete_pattern(f"api:{module}:list:*")
     cache.delete_pattern(f"api:{module}:retrieve:wildcard_pk_{instance.pk}*")
+
+def explicit_invalidate_cache(module:str, instance_pk:int):
+    
+    cache.delete_pattern(f"api:{module}:list:*")
+    cache.delete_pattern(f"api:{module}:retrieve:wildcard_pk_{instance_pk}*")

@@ -9,6 +9,8 @@ from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServ
 from user.public import get_users_map
 # from .tasks import process_order_async
 from tools.db.db_router import WRITE_DB
+from tools.etag_tools import get_etag
+from tools.caching import explicit_invalidate_cache
 
 
 
@@ -72,6 +74,7 @@ def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> 
     #     _raise_reservation_failure(client, items_data, products, user_id)
 
     try:
+        explicit_invalidate_cache('order', id)
         with transaction.atomic():
             total = Decimal("0.00")
             for item in items_data:
@@ -152,3 +155,9 @@ def update_order_status(user , order:Order , new_status: str) ->Order:
     order.status = new_status
     order.save(update_fields=['status'], using=WRITE_DB)
     return order
+
+
+
+
+def get_order_etag(request, pk=None, **kwargs)->str:
+    return get_etag(Order, "order", request, pk, **kwargs)
