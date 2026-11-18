@@ -8,20 +8,22 @@ from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServ
 # from .tasks import send_order_confirmation_email
 from user.public import get_users_map
 # from .tasks import process_order_async
+from tools.db.db_router import WRITE_DB
 
 
 
 def initiate_order_processing(user_id: int, user_email: str, items_data: list[dict]) -> Order:
-    
+
     from .tasks import process_order_async
     # 1. Create the shell order
-    order = Order.objects.create(
+    order = Order.objects.db_manager(WRITE_DB).create(
         user_id=user_id, 
         status=Order.Status.PROCESSING
     )
 
 
     transaction.on_commit(
+    
         lambda: process_order_async.delay(
             order_id=order.id,
             items_data=items_data,
@@ -78,7 +80,7 @@ def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> 
                 unit_price = product_public.get(pid).price
                 qty = item["quantity"]
                 
-                OrderItem.objects.create(
+                OrderItem.objects.db_manager(WRITE_DB).create(
                     order=order,
                     product_id=pid,
                     quantity=qty,
@@ -87,7 +89,7 @@ def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> 
                 total += unit_price * qty
 
             order.total = total
-            order.save(update_fields=["total"]) 
+            order.save(update_fields=["total"], using=WRITE_DB) 
             
     except Exception:
         _release_reserved(client, items_data, user_id)
@@ -148,5 +150,5 @@ def update_order_status(user , order:Order , new_status: str) ->Order:
         })
 
     order.status = new_status
-    order.save(update_fields=['status'])
+    order.save(update_fields=['status'], using=WRITE_DB)
     return order
