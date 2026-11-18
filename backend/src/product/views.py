@@ -213,7 +213,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             response:Response = self.get_paginated_response(serializer.data)
             for product in serializer.data:
-                if not product['stock']:
+                if not product['stock']: # don't cache
                     return response
             do_cache(
                 cache_key= cache_key,
@@ -224,7 +224,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         for product in serializer.data:
-            if not product['stock']:
+            if not product['stock']: # don't cache
                 return Response(serializer.data)
         
         do_cache(
@@ -252,16 +252,19 @@ class ProductViewSet(viewsets.ModelViewSet):
         cached = get_cached_response(cache_key)
         if cached is not None:
             data = dict(cached.data)
+            return Response(data)
         else:
             instance = self.get_object()
             data = dict(self.get_serializer(instance).data)
+            if not data['stock']: # don't cache
+                return Response(data)
             do_cache(
                 cache_key=cache_key,
                 data=data,
                 timeout=60 * cache_timeout_minutes
             )
 
-        data["stock"] = get_stock(id=int(pk), user_id=int(request.user.id))
+        # data["stock"] = get_stock(id=int(pk), user_id=int(request.user.id))
         return Response(data)
             
 
