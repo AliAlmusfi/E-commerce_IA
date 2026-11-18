@@ -1,6 +1,11 @@
-services:
+services:  
   django-db:
     image: mysql:8.4
+    command: >
+      --server-id=1
+      --log-bin=mysql-bin
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
     environment:
       MYSQL_DATABASE: django_db
       MYSQL_USER: django_user
@@ -8,6 +13,31 @@ services:
       MYSQL_ROOT_PASSWORD: root_password
     volumes:
       - django_db_data:/var/lib/mysql
+      - ./mysql-init/primary-init.sql:/docker-entrypoint-initdb.d/01-primary-init.sql:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  django-replica-db:
+    image: mysql:8.4
+    command: >
+      --server-id=2
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --read-only=1
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - django_replica_db_data:/var/lib/mysql
+      - ./mysql-init/replica-init.sql:/docker-entrypoint-initdb.d/01-replica-init.sql:ro
+    depends_on:
+      django-db:
+        condition: service_healthy
     networks:
       - app-network
     healthcheck:
@@ -73,10 +103,13 @@ services:
       - DATABASE_NAME=django_db
       - DATABASE_USER=django_user
       - DATABASE_PASSWORD=django_password
+      - REPLICA_DATABASE_HOST=django-replica-db
+      - REPLICA_DATABASE_NAME=django_db
+      - REPLICA_DATABASE_USER=django_user
+      - REPLICA_DATABASE_PASSWORD=django_password
       - FLASK_GRPC_HOST=flask-app
       - FLASK_GRPC_PORT=50051
       - REDIS_URL=redis://redis:6379/1
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
     command: gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     volumes:
       # CHANGE: Update your path to include backend/
@@ -87,9 +120,9 @@ services:
     depends_on:
       django-db:
         condition: service_healthy
-      redis:
+      django-replica-db:
         condition: service_healthy
-      rabbitmq:
+      redis:
         condition: service_healthy
     networks:
       - app-network
@@ -117,63 +150,11 @@ services:
     networks:
       - app-network
 
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
-      CELERY_RESULT_BACKEND: rpc:// 
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 30s
-
-
-  celery-worker:
-    build:
-      context: .
-      dockerfile: src/DockerFile
-    env_file:
-      - ./src/.env
-    environment:
-      - DJANGO_DEBUG=0
-      - DATABASE_HOST=django-db
-      - DATABASE_NAME=django_db
-      - DATABASE_USER=django_user
-      - DATABASE_PASSWORD=django_password
-      - FLASK_GRPC_HOST=flask-app
-      - FLASK_GRPC_PORT=50051
-      - REDIS_URL=redis://redis:6379/1
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
-    entrypoint: ["celery", "-A", "e_commerce", "worker", "-l", "info"]
-    volumes:
-      - ./src:/app
-      - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      django-db:
-        condition: service_healthy
-    networks:
-      - app-network
-
 volumes:
   django_db_data:
+  django_replica_db_data:
   flask_db_data:
   redis_data:
-  rabbitmq_data:
-
 
 networks:
   app-network:

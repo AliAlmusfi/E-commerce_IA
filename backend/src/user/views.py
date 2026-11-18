@@ -28,6 +28,8 @@ class UserViewSet (viewsets.ModelViewSet):
             self.permission_classes.append(IsAdminUser)
         if self.action == 'me':
             self.permission_classes.append(IsAuthenticated)
+        if self.action == 'register':
+            self.permission_classes = [AllowAny]
         
         return super().get_permissions()
     

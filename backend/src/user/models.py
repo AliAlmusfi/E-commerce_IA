@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import BaseUserManager , AbstractBaseUser , PermissionsMixin , Group, Permission
 from tools.models import TimeStampedModel
 from e_commerce import settings
+from tools.db.db_router import WRITE_DB
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
@@ -13,7 +14,7 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         user = self.model(username = username , email = email , **extra_fields)
         user.set_password(password)
-        user.save()
+        user.save(using=WRITE_DB)
         return user
     
     def create_superuser(self, username , email , password , **extra_fields):
@@ -30,7 +31,7 @@ class User(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
         db_table = 'users'
     username = models.CharField(max_length=100 , unique=True)
     email = models.EmailField(unique=True)
-    objects = CustomUserManager()
+    # objects = CustomUserManager()
 
     is_staff    = models.BooleanField(default=False)
     is_active   = models.BooleanField(default=True)

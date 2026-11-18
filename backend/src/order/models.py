@@ -8,24 +8,22 @@ from e_commerce import settings
 class Order (TimeStampedModel):
     class Meta:
         db_table = 'orders'
+        ordering = ['id']
 
     total  = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     # product_quantity = models.IntegerField(null=False, blank=False)
 
     class Status(models.TextChoices):
-        PROCESSING = "processing", "Processing"
         PENDING = "pending", "Pending"
         COMPLETE = "complete", "Complete"
-        FAILED = "failed", "Failed"
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.PROCESSING,
+        default=Status.PENDING,
         null=False,
         blank=False
     )
 
-    error_message = models.CharField(max_length=255, blank=True, null=True)
     user_id = models.PositiveBigIntegerField(db_index=True)
     
     # user = models.ForeignKey(

@@ -15,6 +15,8 @@ from user.models import User
 
 from drf_spectacular.utils import extend_schema
 
+from tools.db.db_router import WRITE_DB
+
 
 class NotificationViewSet (viewsets.ModelViewSet):
     queryset = Device.objects.all()
@@ -31,7 +33,7 @@ class NotificationViewSet (viewsets.ModelViewSet):
     def register_device(self, request):
         serializer = DeviceSerializer(data=request.data)
         if serializer.is_valid():
-            device, created = Device.objects.update_or_create(
+            device, created = Device.objects.db_manager(WRITE_DB).update_or_create(
                 user=request.user,
                 registration_id=serializer.validated_data['registration_id'],
                 defaults={
