@@ -7,8 +7,9 @@ from rest_framework.response import Response
 # from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
 from rest_framework.throttling import UserRateThrottle , ScopedRateThrottle 
+from rest_framework_condition import etag
 
-from .services import  update_order_status , initiate_order_processing
+from .services import  update_order_status , initiate_order_processing, get_order_etag
 from django.core.exceptions import ValidationError , PermissionDenied
 
 from user.public import get_users_map
@@ -219,7 +220,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         # # serializer.save()
         return Response(OrderSerializer(updated_status, context=self.get_serializer_context()).data)
 
-
+    @etag(get_order_etag)
     def list(self, request, *args, **kwargs):
         endpoint = self.action
         cache_timeout_minutes = 10
@@ -256,6 +257,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
         return Response(serializer.data)
 
+    @etag(get_order_etag)
     def retrieve(self, request, pk, *args, **kwargs):
         endpoint = self.action
         cache_timeout_minutes = 10

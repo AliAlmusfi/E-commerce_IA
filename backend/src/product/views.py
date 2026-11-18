@@ -13,13 +13,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+from rest_framework_condition import etag
 
 from drf_spectacular.utils import extend_schema
 
 from .models import Product
 from .serializers import ProductSerializer, ProductUpdateSerializer, ProductStockSerializer
 from .filters import ProductFilter , ProductSearchFilter
-from .services import create_product, patch_product, get_stock, update_stock as update_stk
+from .services import create_product, patch_product, get_stock, get_product_etag, update_stock as update_stk
 
 from tools.exceptions import exception_response, grpc_exception_response
 from tools.grpc.client import InventoryServiceError
@@ -101,6 +102,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         #     return grpc_exception_response(e)
 
         product_data = self.get_serializer(instance=product)
+        
         return Response(
             product_data.data,
             status=status.HTTP_201_CREATED
@@ -191,6 +193,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         description="list Product to user",
         tags=["Product"],
     )    
+    @etag(get_product_etag)
     def list(self, request, *args, **kwargs):
         endpoint = self.action
         cache_timeout_minutes = 30
@@ -240,6 +243,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         description="retrieve Product to user",
         tags=["Product"],
     ) 
+    @etag(get_product_etag)
     def retrieve(self, request, pk, *args, **kwargs):
         endpoint = self.action
         cache_timeout_minutes = 30

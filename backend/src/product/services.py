@@ -3,6 +3,8 @@ from .models import Product
 from tools.grpc.client import InventoryClient #, InventoryServiceError
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
 from tools.db.db_router import WRITE_DB
+from tools.etag_tools import get_etag
+from tools.caching import explicit_invalidate_cache
 
 
 def create_product(user_id, data:dict)->Product:
@@ -35,7 +37,7 @@ def create_product(user_id, data:dict)->Product:
 
 def delete_product(product:Product):
     # Product.objects.filter(id=id).delete()
-    product.delete()
+    product.delete(using=WRITE_DB)
 
 def patch_product(id, user_id, data:dict)->Product:
     product = Product.objects.db_manager(WRITE_DB).get(id)
@@ -72,6 +74,7 @@ def get_stock(id, user_id)-> int:
         
 def update_stock(id, user_id, amount)->bool:
     try:
+        explicit_invalidate_cache('product', id)
         client = InventoryClient()
         response = client.update_product_quantity(
             user_id=int(user_id),
@@ -81,3 +84,7 @@ def update_stock(id, user_id, amount)->bool:
         return response['success'] or False
     except InventoryServiceError:
         raise
+
+
+def get_product_etag(request, pk=None, **kwargs)->str:
+    return get_etag(Product, "product", request, pk, **kwargs)

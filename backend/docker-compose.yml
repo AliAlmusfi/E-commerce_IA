@@ -26,6 +26,8 @@ services:
   django-replica-db:
     image: mysql:8.4
     command: >
+      --relay-log=mysql-relay-bin
+      --relay-log-index=mysql-relay-bin.index
       --server-id=2
       --gtid-mode=ON
       --enforce-gtid-consistency=ON
