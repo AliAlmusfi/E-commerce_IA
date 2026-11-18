@@ -35,8 +35,12 @@ def get_cache_key(module, endpoint, wildcard_pk=None, user_id=None, is_staff=Non
     if params_hash is not None:
         params = [(k, v) for k, v in params_hash if k != 'page']
         if params:
-            hash_val  = hashlib.md5(urlencode(sorted([(k, v) for k, v in params]), doseq=True)).hexdigest()
+            hash_val  = hashlib.md5(
+                urlencode(sorted(params), doseq=True).encode('utf-8')
+            ).hexdigest()
+
             result += f":params_hash_{hash_val}"
+
     
     if page is not None:
         result += f":page_{page}"
