@@ -13,6 +13,30 @@ const refreshApi = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
+// ==========================================
+// 1. نظام الكاش (ETag & Data Cache)
+// ==========================================
+const etagCache = new Map()
+const dataCache = new Map()
+
+// دالة مساعدة لإنشاء مفتاح فريد يعتمد على الرابط والـ Parameters
+const getCacheKey = (config) => {
+  const params = config.params ? JSON.stringify(config.params) : ''
+  return `${config.url}${params}`
+}
+
+export function clearApiCache(urlPattern) {
+  for (const key of etagCache.keys()) {
+    if (key.includes(urlPattern)) etagCache.delete(key)
+  }
+  for (const key of dataCache.keys()) {
+    if (key.includes(urlPattern)) dataCache.delete(key)
+  }
+}
+
+// ==========================================
+// 2. Request Interceptor (التوكن + ETag)
+// ==========================================
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   
@@ -20,12 +44,28 @@ api.interceptors.request.use((config) => {
     config.url?.includes('/users/token/') || 
     config.url?.includes('/users/register/')
 
+  // إضافة التوكن
   if (token && !isAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // إضافة ETag إذا كنا نطلب بيانات GET ولدينا نسخة محفوظة
+  if (config.method === 'get') {
+    const cacheKey = getCacheKey(config)
+    const etag = etagCache.get(cacheKey)
+    
+    // نرسل الـ ETag فقط إذا كنا نمتلك البيانات فعلاً في الكاش
+    if (etag && dataCache.has(cacheKey)) {
+      config.headers['If-None-Match'] = etag
+    }
+  }
+
   return config
 })
 
+// ==========================================
+// 3. Response Interceptor (304 / 401)
+// ==========================================
 let isRefreshing = false
 let failedQueue = []
 
@@ -38,10 +78,38 @@ const processQueue = (error, token = null) => {
 }
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // حفظ الـ ETag والبيانات عند الاستجابة بنجاح (200 OK)
+    if (res.config.method === 'get' && res.headers['etag']) {
+      const cacheKey = getCacheKey(res.config)
+      etagCache.set(cacheKey, res.headers['etag'])
+      dataCache.set(cacheKey, res.data)
+    }
+    return res
+  },
   async (err) => {
     const original = err.config
 
+    // ---- معالجة حالة 304 Not Modified (البيانات لم تتغير) ----
+    if (err.response?.status === 304) {
+      const cacheKey = getCacheKey(original)
+      const cachedData = dataCache.get(cacheKey)
+      
+      if (cachedData) {
+        // نرجع استجابة وهمية 200 تحتوي على البيانات المحفوظة
+        return Promise.resolve({
+          data: cachedData,
+          status: 200,
+          statusText: 'OK (Cached)',
+          headers: err.response.headers,
+          config: original,
+        })
+      }
+      // إذا لم نجد بيانات في الكاش (حالة نادرة جداً)، نعيد الخطأ
+      return Promise.reject(err)
+    }
+
+    // ---- معالجة حالة 401 Unauthorized (انتهاء صلاحية التوكن) ----
     if (err.response?.status !== 401 || original._retry) {
       return Promise.reject(err)
     }

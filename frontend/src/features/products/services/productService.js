@@ -1,4 +1,4 @@
-import api from '../../../api/axios'
+import api, { clearApiCache } from '../../../api/axios'
 
 export const fetchProducts = async (params = {}) => {
   const { data } = await api.get('/products/', { params })
@@ -9,19 +9,22 @@ export const fetchProductDetails = async (id) => {
   const { data } = await api.get(`/products/${id}/`)
   return data
 }
-
 export const createProduct = async (formData) => {
   const { data } = await api.post('/products/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
-  return data
-}
-
-export const updateStock = async (id, amount) => {
-  const { data } = await api.patch(`/products/${id}/update_stock/`, { amount })
+  clearApiCache('/products/')
   return data
 }
 
 export const deleteProduct = async (id) => {
   await api.delete(`/products/${id}/`)
+  clearApiCache('/products/')
+}
+
+export const updateStock = async (id, amount) => {
+  const { data } = await api.patch(`/products/${id}/update_stock/`, { amount })
+  // مسح الكاش
+  clearApiCache('/products/')
+  return data
 }

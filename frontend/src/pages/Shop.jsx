@@ -30,15 +30,13 @@ export default function Shop() {
         const data = await fetchProducts({ page })
         const list = Array.isArray(data) ? data : (data.results || [])
 
-        if (!list || list.length === 0) {
-          throw new Error('Empty response')
-        }
         setProducts(list)
-        setTotalPages(data.total_pages || Math.ceil(data.count / 10) || 1)
+        setTotalPages(data.total_pages || Math.ceil((data.count || 0) / 10) || 1)
         setIsDemo(false)
-      // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line no-unused-vars
       } catch (err) {
-        // في حال فشل الـ API (401 أو 500)، نعرض البيانات التجريبية
+        // الدخول هنا يعني أن هناك خطأ في السيرفر (مثل 500 أو انقطاع الشبكة)
+        // فقط في هذه الحالة نعرض المنتجات التجريبية
         const filtered = category
           ? DEMO_PRODUCTS.filter(p => p.category === category)
           : DEMO_PRODUCTS
@@ -67,29 +65,15 @@ export default function Shop() {
           <p className="cycle_text">Explore our wide range of premium bicycles</p>
 
           {isDemo && (
-            <div style={{
-              backgroundColor: '#fff3cd',
-              color: '#856404',
-              padding: '12px 20px',
-              borderRadius: '8px',
-              marginBottom: '30px',
-              textAlign: 'center',
-              fontWeight: 'bold',
-              border: '1px solid #ffeeba'
-            }}>
-              ⚠️ Currently showing demo products. The server is not reachable or Inventory Service is down.
+            <div style={{ backgroundColor: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: '8px', marginBottom: '30px', textAlign: 'center', fontWeight: 'bold', border: '1px solid #ffeeba' }}>
+              ⚠️ Currently showing demo products. The server is not reachable.
             </div>
           )}
 
           {isDemo && (
             <div className="row mb-5 justify-content-center">
               <div className="col-md-4">
-                <select
-                  className="form-control"
-                  value={category}
-                  onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-                  style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}
-                >
+                <select className="form-control" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}>
                   <option value="">All Categories</option>
                   <option value="mountain">Mountain</option>
                   <option value="road">Road</option>
@@ -108,7 +92,7 @@ export default function Shop() {
             <>
               {products.length === 0 && !error ? (
                 <div className="text-center" style={{ padding: '50px 0' }}>
-                  <h3>No products found.</h3>
+                  <h3>No products found in the store.</h3>
                 </div>
               ) : (
                 <div className="row">
@@ -125,46 +109,28 @@ export default function Shop() {
                                   <div className="box_main">
                                     <h6 className="number_text">{String(index + 1).padStart(2, '0')}</h6>
                                     <div className="image_2">
-                                      <img
-                                        src={imageSrc}
-                                        alt={product.title}
-                                        style={{ objectFit: 'cover', maxHeight: '400px', width: '100%' }}
-                                      />
+                                      <img src={imageSrc} alt={product.title} style={{ objectFit: 'cover', maxHeight: '400px', width: '100%' }} />
                                     </div>
                                   </div>
                                 </div>
                                 <div className="col-md-6">
                                   {product.manufacturer && (
-                                    <p style={{
-                                      color: '#f7c17b',
-                                      fontWeight: 'bold',
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '1px',
-                                      fontSize: '13px',
-                                      marginBottom: '8px'
-                                    }}>
+                                    <p style={{ color: '#f7c17b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '13px', marginBottom: '8px' }}>
                                       {product.manufacturer}
                                     </p>
                                   )}
                                   <h1 className="cycles_text">{product.title}</h1>
                                   <p className="lorem_text">{product.description}</p>
                                   <div className="btn_main">
-                                    <button
-                                      className="buy_bt"
-                                      style={{ border: 'none', cursor: 'pointer' }}
-                                      onClick={() => addItem(product)}
-                                    >
+                                    <button className="buy_bt" style={{ border: 'none', cursor: 'pointer' }} onClick={() => addItem(product)}>
                                       Add to Cart
                                     </button>
                                     <h4 className="price_text">
-                                      Price <span style={{ color: '#f7c17b' }}>$</span>
-                                      <span style={{ color: '#325662' }}> {product.price}</span>
+                                      Price <span style={{ color: '#f7c17b' }}>$</span><span style={{ color: '#325662' }}> {product.price}</span>
                                     </h4>
                                   </div>
                                   <div className="mt-3">
-                                    <Link to={`/product/${product.id}`} style={{ color: '#325662', textDecoration: 'underline' }}>
-                                      View Details
-                                    </Link>
+                                    <Link to={`/product/${product.id}`} style={{ color: '#325662', textDecoration: 'underline' }}>View Details</Link>
                                   </div>
                                 </div>
                               </>
@@ -172,47 +138,29 @@ export default function Shop() {
                               <>
                                 <div className="col-md-6">
                                   {product.manufacturer && (
-                                    <p style={{
-                                      color: '#f7c17b',
-                                      fontWeight: 'bold',
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '1px',
-                                      fontSize: '13px',
-                                      marginBottom: '8px'
-                                    }}>
+                                    <p style={{ color: '#f7c17b', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '13px', marginBottom: '8px' }}>
                                       {product.manufacturer}
                                     </p>
                                   )}
                                   <h1 className="cycles_text">{product.title}</h1>
                                   <p className="lorem_text">{product.description}</p>
                                   <div className="btn_main">
-                                    <button
-                                      className="buy_bt"
-                                      style={{ border: 'none', cursor: 'pointer' }}
-                                      onClick={() => addItem(product)}
-                                    >
+                                    <button className="buy_bt" style={{ border: 'none', cursor: 'pointer' }} onClick={() => addItem(product)}>
                                       Add to Cart
                                     </button>
                                     <h4 className="price_text">
-                                      Price <span style={{ color: '#f7c17b' }}>$</span>
-                                      <span style={{ color: '#325662' }}> {product.price}</span>
+                                      Price <span style={{ color: '#f7c17b' }}>$</span><span style={{ color: '#325662' }}> {product.price}</span>
                                     </h4>
                                   </div>
                                   <div className="mt-3">
-                                    <Link to={`/product/${product.id}`} style={{ color: '#325662', textDecoration: 'underline' }}>
-                                      View Details
-                                    </Link>
+                                    <Link to={`/product/${product.id}`} style={{ color: '#325662', textDecoration: 'underline' }}>View Details</Link>
                                   </div>
                                 </div>
                                 <div className="col-md-6">
                                   <div className="box_main_3">
                                     <h6 className="number_text_2">{String(index + 1).padStart(2, '0')}</h6>
                                     <div className="image_2">
-                                      <img
-                                        src={imageSrc}
-                                        alt={product.title}
-                                        style={{ objectFit: 'cover', maxHeight: '400px', width: '100%' }}
-                                      />
+                                      <img src={imageSrc} alt={product.title} style={{ objectFit: 'cover', maxHeight: '400px', width: '100%' }} />
                                     </div>
                                   </div>
                                 </div>
@@ -228,23 +176,11 @@ export default function Shop() {
 
               {!isDemo && totalPages > 1 && (
                 <div className="d-flex justify-content-center mt-5">
-                  <button
-                    className="btn btn-outline-dark mr-3"
-                    disabled={page === 1}
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    style={{ padding: '10px 20px', borderRadius: '8px' }}
-                  >
+                  <button className="btn btn-outline-dark mr-3" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} style={{ padding: '10px 20px', borderRadius: '8px' }}>
                     Previous
                   </button>
-                  <span className="align-self-center mx-3" style={{ fontWeight: 'bold' }}>
-                    Page {page} of {totalPages}
-                  </span>
-                  <button
-                    className="btn btn-outline-dark ml-3"
-                    disabled={page === totalPages}
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    style={{ padding: '10px 20px', borderRadius: '8px' }}
-                  >
+                  <span className="align-self-center mx-3" style={{ fontWeight: 'bold' }}>Page {page} of {totalPages}</span>
+                  <button className="btn btn-outline-dark ml-3" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} style={{ padding: '10px 20px', borderRadius: '8px' }}>
                     Next
                   </button>
                 </div>

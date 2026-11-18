@@ -1,9 +1,11 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import AdminNavbar from '../components/layout/AdminNavbar'
 import Loader from '../components/feedback/Loader'
 import { useNotification } from '../context/NotificationContext'
+import { useAuth } from '../context/AuthContext'
+import { useWebSocket } from '../hooks/useWebSocket'
 import {
   fetchProducts,
   createProduct,
@@ -15,7 +17,10 @@ import {
   updateOrderStatus
 } from '../features/orders/services/orderService'
 
-const STATUS_OPTIONS = ['pending', 'preparing', 'go out', 'delivered', 'completed']
+const STATUS_OPTIONS = [
+  { value: 'pending',  label: 'Pending'  },
+  { value: 'complete', label: 'Complete' }
+]
 
 const EMPTY_PRODUCT = {
   title: '',
@@ -46,6 +51,26 @@ const labelStyle = {
   marginBottom: '6px'
 }
 
+// ---------------------------------------------------------
+// مكون مساعد للاستماع للـ WebSocket لكل طلب على حدة
+// ---------------------------------------------------------
+function OrderSocketListener({ orderId, token, onUpdate }) {
+  const handleWsMessage = useCallback((data) => {
+    // بمجرد وصول أي رسالة تفيد بتحديث الحالة
+    if (data.status || data.type === 'order_status_updated') {
+      onUpdate(orderId, data.status || data.new_status)
+    }
+  }, [orderId, onUpdate])
+
+  // استخدام المسار الدقيق الذي أرسلته: /ws/order/{id}/
+  useWebSocket(`/ws/order/${orderId}/`, token, handleWsMessage)
+  
+  return null // لا يرسم أي واجهة
+}
+
+// ---------------------------------------------------------
+// المكون الرئيسي
+// ---------------------------------------------------------
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('products')
 
@@ -59,8 +84,6 @@ export default function AdminDashboard() {
         padding: '40px 0'
       }}>
         <div className="container">
-
-          {/* Header Section */}
           <div style={{ marginBottom: '25px' }}>
             <h1 style={{
               color: '#111827',
@@ -85,6 +108,9 @@ export default function AdminDashboard() {
   )
 }
 
+// ---------------------------------------------------------
+// تبويب المنتجات (Products Tab)
+// ---------------------------------------------------------
 function ProductsTab() {
   const { success, error: showError } = useNotification()
   const [products, setProducts] = useState([])
@@ -92,6 +118,8 @@ function ProductsTab() {
   const [form, setForm] = useState(EMPTY_PRODUCT)
   const [image, setImage] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  
+  // حالات تعديل المخزون السريع
   const [stockEdit, setStockEdit] = useState(null)
   const [updatingStockId, setUpdatingStockId] = useState(null)
 
@@ -142,9 +170,7 @@ function ProductsTab() {
       if (data && typeof data === 'object') {
         const firstKey = Object.keys(data)[0]
         const firstVal = data[firstKey]
-        msg = Array.isArray(firstVal)
-          ? `${firstKey}: ${firstVal[0]}`
-          : `${firstKey}: ${firstVal}`
+        msg = Array.isArray(firstVal) ? `${firstKey}: ${firstVal[0]}` : `${firstKey}: ${firstVal}`
       }
       showError(msg)
     } finally {
@@ -192,7 +218,7 @@ function ProductsTab() {
 
   return (
     <div className="row">
-      {/* Form Column */}
+      {/* عمود إضافة منتج */}
       <div className="col-lg-4 mb-4">
         <div style={{
           background: '#ffffff',
@@ -206,7 +232,6 @@ function ProductsTab() {
             Add New Product
           </h2>
           <form onSubmit={handleSubmit}>
-
             <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Product Title <span style={{color: '#ef4444'}}>*</span></label>
               <input
@@ -311,7 +336,7 @@ function ProductsTab() {
         </div>
       </div>
 
-      {/* Table Column */}
+      {/* عمود جدول المنتجات */}
       <div className="col-lg-8">
         <div style={{
           background: '#ffffff',
@@ -368,16 +393,10 @@ function ProductsTab() {
                           <img
                             src={p.image}
                             alt={p.title}
-                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb', overflow: 'visible' }}
+                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }}
                           />
                         ) : (
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            background: '#f3f4f6',
-                            borderRadius: '4px',
-                            border: '1px solid #e5e7eb'
-                          }} />
+                          <div style={{ width: '40px', height: '40px', background: '#f3f4f6', borderRadius: '4px', border: '1px solid #e5e7eb' }} />
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', fontWeight: '500', color: '#111827' }}>
@@ -389,6 +408,8 @@ function ProductsTab() {
                       <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '500', textAlign: 'right' }}>
                         ${Number(p.price).toFixed(2)}
                       </td>
+                      
+                      {/* خلية المخزون مع إمكانية التعديل المباشر */}
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         {stockEdit?.id === p.id ? (
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -403,14 +424,8 @@ function ProductsTab() {
                               }}
                               placeholder="±0"
                               style={{
-                                width: '72px',
-                                padding: '4px 6px',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                textAlign: 'right',
-                                outline: 'none',
-                                boxSizing: 'border-box'
+                                width: '72px', padding: '4px 6px', border: '1px solid #d1d5db',
+                                borderRadius: '4px', fontSize: '12px', textAlign: 'right', outline: 'none'
                               }}
                             />
                             <button
@@ -418,30 +433,18 @@ function ProductsTab() {
                               disabled={updatingStockId === p.id}
                               style={{
                                 background: updatingStockId === p.id ? '#9ca3af' : '#325662',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '4px 8px',
-                                cursor: updatingStockId === p.id ? 'not-allowed' : 'pointer',
-                                fontSize: '12px',
-                                fontWeight: '600'
+                                color: '#fff', border: 'none', borderRadius: '4px',
+                                padding: '4px 8px', cursor: updatingStockId === p.id ? 'not-allowed' : 'pointer',
+                                fontSize: '12px', fontWeight: '600'
                               }}
                             >
-                              {updatingStockId === p.id ? '…' : 'Save'}
+                              Save
                             </button>
                             <button
                               onClick={() => setStockEdit(null)}
-                              style={{
-                                background: 'transparent',
-                                color: '#6b7280',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                padding: '2px 4px'
-                              }}
-                              title="Cancel"
+                              style={{ background: 'transparent', color: '#6b7280', border: 'none', cursor: 'pointer', fontSize: '13px' }}
                             >
-                              ✕
+                              X
                             </button>
                           </div>
                         ) : (
@@ -449,34 +452,21 @@ function ProductsTab() {
                             onClick={() => setStockEdit({ id: p.id, amount: '' })}
                             title="Click to update stock"
                             style={{
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
+                              padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
                               border: `1px solid ${p.stock > 0 ? '#a7f3d0' : '#fecaca'}`,
                               background: p.stock > 0 ? '#ecfdf5' : '#fef2f2',
                               color: p.stock > 0 ? '#047857' : '#b91c1c'
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = p.stock > 0 ? '#d1fae5' : '#fee2e2'}
-                            onMouseLeave={e => e.currentTarget.style.background = p.stock > 0 ? '#ecfdf5' : '#fef2f2'}
                           >
                             {p.stock ?? 0}
                           </button>
                         )}
                       </td>
+
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <button
                           onClick={() => handleDelete(p.id, p.title)}
-                          style={{
-                            background: 'transparent',
-                            color: '#ef4444',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            padding: '4px 8px'
-                          }}
+                          style={{ background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600', padding: '4px 8px' }}
                           onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
                           onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
                         >
@@ -500,13 +490,17 @@ function ProductsTab() {
   )
 }
 
+// ---------------------------------------------------------
+// تبويب الطلبات (Orders Tab) مع الاستماع اللحظي للـ WebSocket
+// ---------------------------------------------------------
 function OrdersTab() {
-  const { success, error: showError } = useNotification()
+  const { success, error: showError, info } = useNotification()
+  const { token } = useAuth()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const data = await fetchAllOrders()
@@ -516,19 +510,25 @@ function OrdersTab() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [showError])
 
   useEffect(() => {
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [load])
+
+  // دالة تُستدعى عند وصول تحديث عبر WebSocket
+  const handleLiveUpdate = useCallback((orderId, newStatus) => {
+    info(`Live Update: Order #${orderId} was updated to "${newStatus}".`)
+    load() // إعادة جلب البيانات لتحديث الواجهة
+  }, [info, load])
 
   const handleStatusChange = async (order, newStatus) => {
     if (newStatus === order.status) return
     setUpdatingId(order.id)
     try {
       await updateOrderStatus(order.id, newStatus)
-      success(`Order #${order.id} updated to "${newStatus}".`)
+      const label = STATUS_OPTIONS.find(s => s.value === newStatus)?.label || newStatus
+      success(`Order #${order.id} updated to "${label}".`)
       await load()
     } catch (err) {
       const data = err?.response?.data
@@ -546,16 +546,13 @@ function OrdersTab() {
 
   const getStatusBadgeColor = (status) => {
     const colors = {
-      pending: { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
-      preparing: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' },
-      'go out': { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' },
-      delivered: { bg: '#ecfdf5', text: '#047857', border: '#a7f3d0' },
-      completed: { bg: '#f3f4f6', text: '#374151', border: '#e5e7eb' }
+      pending:  { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
+      complete: { bg: '#ecfdf5', text: '#047857', border: '#a7f3d0' }
     }
     return colors[status] || { bg: '#f3f4f6', text: '#374151', border: '#e5e7eb' }
   }
 
-  if (loading) return <Loader />
+  if (loading && orders.length === 0) return <Loader />
 
   return (
     <div style={{
@@ -571,7 +568,7 @@ function OrdersTab() {
         marginBottom: '20px'
       }}>
         <h2 style={{ color: '#111827', margin: 0, fontSize: '16px', fontWeight: '600' }}>
-          Recent Orders
+          Recent Orders (Live)
         </h2>
         <button
           onClick={load}
@@ -609,6 +606,9 @@ function OrdersTab() {
               const badge = getStatusBadgeColor(o.status)
               return (
                 <tr key={o.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  {/* حقن المستمع للـ WebSocket في كل صف */}
+                  <OrderSocketListener orderId={o.id} token={token} onUpdate={handleLiveUpdate} />
+                  
                   <td style={{ padding: '12px 16px', fontWeight: '600', color: '#111827' }}>
                     #{o.id}
                   </td>
@@ -655,7 +655,7 @@ function OrdersTab() {
                       }}
                     >
                       {STATUS_OPTIONS.map(s => (
-                        <option key={s} value={s}>{s}</option>
+                        <option key={s.value} value={s.value}>{s.label}</option>
                       ))}
                     </select>
                   </td>
