@@ -29,22 +29,26 @@ class OrderItemSerializer(serializers.ModelSerializer):
     def get_product_title(self, obj) -> str:
         product_map = self.context.get('product_map', {})
         product = product_map.get(obj.product_id)
-        return product.get("title") if product else "Unknown Product"
+        return product.title if product else "Unknown Product"
 
     def get_product_image(self, obj) -> str:
         product_map = self.context.get('product_map', {})
-        product = product_map.get(obj.product_id) 
-        return product.get("image") if product else ""
+        product = product_map.get(obj.product_id)
+        if not product:
+            return ""
+        # Works whether `product` is a ProductDTO or a dict
+        image = getattr(product, "image", None) if not isinstance(product, dict) else product.get("image")
+        return str(image) if image else ""
 
     def get_product_manufacturer(self, obj) -> str:
         product_map = self.context.get('product_map', {})
         product = product_map.get(obj.product_id)
-        return product.get("manufacturer") if product else ""
+        return product.manufacturer if product else ""
     
     def get_product_description(self, obj) -> str:
         product_map = self.context.get('product_map', {})
         product = product_map.get(obj.product_id)
-        return product.get("description") if product else ""
+        return product.description if product else ""
     
 
 class OrderSerializer(serializers.ModelSerializer):

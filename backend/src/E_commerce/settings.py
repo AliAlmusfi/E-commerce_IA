@@ -314,3 +314,17 @@ LOGGING = {
         },
     },
 }
+
+
+#Realtime
+
+ASGI_APPLICATION = 'E_commerce.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get("REDIS_URL")], # Use DB 2 for channels
+        },
+    },
+}
