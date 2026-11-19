@@ -101,7 +101,7 @@ export default function Cart() {
                                             display: 'block',
                                             width: '100%',
                                             background: '#f7c17b',
-                                            color: '#fff',
+                                            color: '#ffffff',
                                             textAlign: 'center',
                                             padding: '15px',
                                             borderRadius: '8px',
