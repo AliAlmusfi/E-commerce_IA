@@ -81,19 +81,16 @@ function OrderDetails({ orderId }) {
   )
 }
 
-// مكون مساعد للاستماع للـ WebSocket لكل طلب
 function OrderSocketListener({ orderId, token, onUpdate }) {
   const handleWsMessage = useCallback((data) => {
-    // إذا أرسل الباك إند تحديثاً للحالة، نستدعي دالة التحديث
     if (data.status || data.type === 'order_status_updated') {
       onUpdate(orderId, data.status || data.new_status)
     }
   }, [orderId, onUpdate])
 
-  // استخدام الرابط الذي أرسلته بالضبط
   useWebSocket(`/ws/order/${orderId}/`, token, handleWsMessage)
   
-  return null // هذا المكون لا يرسم شيئاً، فقط يستمع في الخلفية
+  return null 
 }
 
 export default function OrderStatus() {

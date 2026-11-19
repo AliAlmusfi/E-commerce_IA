@@ -252,7 +252,7 @@ REST_FRAMEWORK= {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '20/minute',  # For unauthenticated users
-        'user': '100/hour'    # For authenticated users
+        'user': '100000000/hour'    # For authenticated users
     },
     'EXCEPTION_HANDLER': 'tools.error_handler.exceptions.custom_exception_handler',
 }

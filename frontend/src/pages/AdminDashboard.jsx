@@ -63,7 +63,7 @@ function OrderSocketListener({ orderId, token, onUpdate }) {
   }, [orderId, onUpdate])
 
   // استخدام المسار الدقيق الذي أرسلته: /ws/order/{id}/
-  useWebSocket(`/ws/order/${orderId}/`, token, handleWsMessage)
+  useWebSocket(`ws/dashboard/`, token, handleWsMessage)
   
   return null // لا يرسم أي واجهة
 }
@@ -392,7 +392,7 @@ function ProductsTab() {
                           <img
                             src={p.image}
                             alt={p.title}
-                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }}
+                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb', overflow : 'visible' }}
                           />
                         ) : (
                           <div style={{ width: '40px', height: '40px', background: '#f3f4f6', borderRadius: '4px', border: '1px solid #e5e7eb' }} />
@@ -515,11 +515,42 @@ function OrdersTab() {
     load()
   }, [load])
 
-  // دالة تُستدعى عند وصول تحديث عبر WebSocket
-  const handleLiveUpdate = useCallback((orderId, newStatus) => {
-    info(`Live Update: Order #${orderId} was updated to "${newStatus}".`)
-    load() // إعادة جلب البيانات لتحديث الواجهة
+  // ✅ الرسائل الواردة من DashboardConsumer هي:
+  //    { order_id, user_email, total }
+    // ✅ استقبال إشعارات الطلبات الجديدة + تحديثات الحالة لحظياً
+  const handleDashboardMessage = useCallback((data) => {
+    // 1. تحديث حالة طلب موجود (order_update)
+    if (data.status && data.order_id) {
+      const label = STATUS_OPTIONS.find(s => s.value === data.status)?.label || data.status
+
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          String(order.id) === String(data.order_id)
+            ? { ...order, status: data.status, status_display: label }
+            : order
+        )
+      )
+
+      if (data.message) {
+        info(data.message)
+      }
+      return
+    }
+
+    // 2. طلب جديد (new_order)
+    if (data.order_id || data.user_email) {
+      info(
+        `New order #${data.order_id} from ${data.user_email || 'a customer'}` +
+        (data.total ? ` ($${Number(data.total).toFixed(2)})` : '')
+      )
+      load()
+    }
   }, [info, load])
+
+  // ✅ اتصال واحد فقط للداشبورد بالكامل
+  useWebSocket('/ws/dashboard/', token, handleDashboardMessage)
+
+
 
   const handleStatusChange = async (order, newStatus) => {
     if (newStatus === order.status) return
@@ -560,29 +591,16 @@ function OrdersTab() {
       borderRadius: '8px',
       padding: '24px'
     }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ color: '#111827', margin: 0, fontSize: '16px', fontWeight: '600' }}>
           Recent Orders (Live)
         </h2>
         <button
           onClick={load}
           style={{
-            background: '#ffffff',
-            border: '1px solid #d1d5db',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            color: '#374151',
-            fontWeight: '500'
+            background: '#ffffff', border: '1px solid #d1d5db', padding: '6px 12px',
+            borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: '#374151', fontWeight: '500'
           }}
-          onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
-          onMouseLeave={(e) => e.target.style.background = '#ffffff'}
         >
           Refresh List
         </button>
@@ -605,32 +623,17 @@ function OrdersTab() {
               const badge = getStatusBadgeColor(o.status)
               return (
                 <tr key={o.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  {/* حقن المستمع للـ WebSocket في كل صف */}
-                  <OrderSocketListener orderId={o.id} token={token} onUpdate={handleLiveUpdate} />
-                  
-                  <td style={{ padding: '12px 16px', fontWeight: '600', color: '#111827' }}>
-                    #{o.id}
-                  </td>
+                  <td style={{ padding: '12px 16px', fontWeight: '600', color: '#111827' }}>#{o.id}</td>
                   <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>
                     {new Date(o.created_at).toLocaleDateString()} <span style={{color:'#9ca3af'}}>{new Date(o.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                   </td>
-                  <td style={{ padding: '12px 16px', color: '#4b5563', textAlign: 'center' }}>
-                    {o.item_count ?? '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '600', textAlign: 'right' }}>
-                    ${Number(o.total || 0).toFixed(2)}
-                  </td>
+                  <td style={{ padding: '12px 16px', color: '#4b5563', textAlign: 'center' }}>{o.item_count ?? '—'}</td>
+                  <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '600', textAlign: 'right' }}>${Number(o.total || 0).toFixed(2)}</td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      background: badge.bg,
-                      color: badge.text,
-                      border: `1px solid ${badge.border}`,
-                      textTransform: 'capitalize',
-                      display: 'inline-block'
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600',
+                      background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`,
+                      textTransform: 'capitalize', display: 'inline-block'
                     }}>
                       {o.status_display || o.status}
                     </span>
@@ -641,16 +644,11 @@ function OrdersTab() {
                       onChange={e => handleStatusChange(o, e.target.value)}
                       disabled={updatingId === o.id}
                       style={{
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #d1d5db',
-                        fontSize: '13px',
-                        textTransform: 'capitalize',
+                        padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1d5db',
+                        fontSize: '13px', textTransform: 'capitalize',
                         cursor: updatingId === o.id ? 'not-allowed' : 'pointer',
                         opacity: updatingId === o.id ? 0.6 : 1,
-                        background: '#ffffff',
-                        outline: 'none',
-                        color: '#374151'
+                        background: '#ffffff', outline: 'none', color: '#374151'
                       }}
                     >
                       {STATUS_OPTIONS.map(s => (
