@@ -21,6 +21,7 @@ class OrderStatusConsumer(AsyncWebsocketConsumer):
             # await self.accept()
             await self.close(code=4003) # 4003 = Forbidden (ليس مالك الطلب)
             return
+            
         
         self.room_group_name = f'order_{self.order_id}'
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -65,4 +66,10 @@ class DashboardConsumer(AsyncWebsocketConsumer):
             'order_id': event['order_id'],
             'user_email': event['user_email'],
             'total': event['total'],
+        }))
+    async def order_update(self, event):
+        await self.send(text_data=json.dumps({
+            'order_id': event['order_id'],
+            'status': event['status'],
+            'message': event['message']
         }))
