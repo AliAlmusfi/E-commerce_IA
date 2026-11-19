@@ -218,7 +218,6 @@ function ProductsTab() {
 
   return (
     <div className="row">
-      {/* عمود إضافة منتج */}
       <div className="col-lg-4 mb-4">
         <div style={{
           background: '#ffffff',

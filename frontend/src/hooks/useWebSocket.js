@@ -3,35 +3,68 @@ import { useEffect, useRef, useState } from 'react'
 export function useWebSocket(path, token, onMessage) {
   const [isConnected, setIsConnected] = useState(false)
   const wsRef = useRef(null)
+  const reconnectTimeoutRef = useRef(null)
+  
+  const onMessageRef = useRef(onMessage)
+  useEffect(() => {
+    onMessageRef.current = onMessage
+  }, [onMessage])
 
   useEffect(() => {
     if (!path || !token) return
 
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const host = import.meta.env.VITE_WS_URL || `${window.location.hostname}:8000`
-    const url = `${protocol}://${host}${path}?token=${token}`
+    let isCancelled = false
 
-    const ws = new WebSocket(url)
-    wsRef.current = ws
+    const connect = () => {
+      if (isCancelled) return
 
-    ws.onopen = () => setIsConnected(true)
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+      const host = import.meta.env.VITE_WS_URL || `${window.location.hostname}:8000`
+      const url = `${protocol}://${host}${path}?token=${token}`
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        onMessage(data)
-      } catch (err) {
-        console.error('[WebSocket] Parse error:', err)
+      const ws = new WebSocket(url)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        if (isCancelled) return
+        console.log(`[WebSocket] Connected to ${path}`)
+        setIsConnected(true)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (onMessageRef.current) onMessageRef.current(data)
+        } catch (err) {
+          console.error('[WebSocket] Parse error:', err)
+        }
+      }
+
+    //   ws.onerror = () => {
+        
+    //   }
+
+      ws.onclose = () => {
+        if (isCancelled) return
+        setIsConnected(false)
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log(`[WebSocket] Reconnecting to ${path}...`)
+          connect()
+        }, 3000)
       }
     }
 
-    ws.onerror = (error) => console.error('[WebSocket] Error:', error)
-    ws.onclose = () => setIsConnected(false)
+    connect()
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN) ws.close()
+      isCancelled = true
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
     }
-  }, [path, token, onMessage])
+  }, [path, token]) 
 
   return { isConnected }
 }
