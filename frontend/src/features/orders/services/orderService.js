@@ -1,15 +1,12 @@
-import api from '../../../api/axios'
+import api, { clearApiCache } from '../../../api/axios'
 
 export const createOrder = async (items) => {
-  const payload = {
-    items: items.map(i => ({
-      product_id: i.id,
-      quantity: i.qty
-    }))
-  }
+  const payload = { items: items.map(i => ({ product_id: i.id, quantity: i.qty })) }
   const { data } = await api.post('/orders/', payload)
+  clearApiCache('/orders/') // مسح كاش الطلبات
   return data
 }
+
 
 export const fetchMyOrders = async () => {
   const { data } = await api.get('/orders/')
@@ -28,6 +25,7 @@ export const fetchAllOrders = async (params = {}) => {
 
 export const updateOrderStatus = async (orderId, status) => {
   const { data } = await api.patch(`/orders/${orderId}/status/`, { status })
+  clearApiCache('/orders/') 
   return data
 }
 

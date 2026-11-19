@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import { useCart } from '../context/CartContext'
-import img2 from '../assets/images/img-2.png'
 import Breadcrumb from '../components/common/Breadcrumb'
+import { resolveImageUrl } from '../utils/imageUrl'
+import img2 from '../assets/images/img-2.png'
 
 export default function Cart() {
     const { items, removeItem, updateQuantity, total, clear } = useCart()
@@ -32,9 +33,9 @@ export default function Cart() {
                                     {items.map(item => (
                                         <div key={item.id} className="d-flex align-items-center mb-4 pb-3" style={{ borderBottom: '1px solid #eee' }}>
                                             <img
-                                                src={item.image || img2}
+                                                src={resolveImageUrl(item.image, img2)}
                                                 alt={item.title}
-                                                style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', overflow: 'visible' }}
+                                                style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
                                             />
                                             <div className="ml-4 flex-grow-1">
                                                 <h4 style={{ color: '#325662', fontSize: '18px', fontWeight: 'bold', margin: 0 }}>{item.title}</h4>
@@ -53,7 +54,7 @@ export default function Cart() {
                                                 >+</button>
                                             </div>
 
-                                            <div style={{ marginLeft: '30px', fontWeight: 'bold', color: '#325662', fontSize: '18px' }}>
+                                            <div style={{ marginLeft: '30px', fontWeight: 'bold', color: '#325662', fontSize: '18px', minWidth: '80px', textAlign: 'right' }}>
                                                 ${(item.price * item.qty).toFixed(2)}
                                             </div>
 

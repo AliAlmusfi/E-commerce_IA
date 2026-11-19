@@ -4,6 +4,8 @@ import uuid
 from typing import Optional, Iterable
 from django.conf import settings
 
+from tools.caching import explicit_invalidate_cache
+
 # ✅ Updated imports based on your new generated code
 from .inventory_pb2 import (
     GetProductStockByIdRequest,
@@ -104,6 +106,8 @@ class InventoryClient:
                 )
         except grpc.RpcError as e:
             _raise_for_rpc(e, f"ReserveProduct({product_id}, {quantity})")
+        finally:
+            explicit_invalidate_cache('product', product_id)
 
         return {
             "success": resp.success,
@@ -140,6 +144,9 @@ class InventoryClient:
                 )
         except grpc.RpcError as e:
             _raise_for_rpc(e, f"ReserveOrder")
+        finally:
+            for product_id, trash in items:
+                explicit_invalidate_cache('product', product_id)
 
         # ✅ Capture failed_product_ids and msg from the new response
         return {
@@ -169,6 +176,8 @@ class InventoryClient:
                 )
         except grpc.RpcError as e:
             _raise_for_rpc(e, f"UpdateProductQuantity({product_id}, {amount})")
+        finally:
+            explicit_invalidate_cache('product', product_id)
 
         return {
             "success": resp.success,

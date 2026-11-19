@@ -8,7 +8,8 @@ class OrderStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
         if not self.user.is_authenticated:
-            await self.close()
+            # await self.accept()
+            await self.close(code=4001) # 4001 = Unauthorized
             return
 
         # Customer connects to their personal order channel
@@ -17,9 +18,10 @@ class OrderStatusConsumer(AsyncWebsocketConsumer):
         # Security check: Does this order belong to this user?
         is_owner = await self.check_order_owner(self.order_id, self.user.id)
         if not is_owner:
-            await self.close()
+            # await self.accept()
+            await self.close(code=4003) # 4003 = Forbidden (ليس مالك الطلب)
             return
-
+        
         self.room_group_name = f'order_{self.order_id}'
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
@@ -37,7 +39,7 @@ class OrderStatusConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def check_order_owner(self, order_id, user_id):
-        return check_user_order_exists(order_ids=order_id , user_id=user_id)
+        return check_user_order_exists(order_id=order_id , user_id=user_id)
         return Order.objects.filter(id=order_id, user_id=user_id).exists()
 
 

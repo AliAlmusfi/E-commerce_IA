@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -13,12 +13,58 @@ const refreshApi = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
+// ==========================================
+// 1. نظام الكاش (ETag & Data Cache)
+// ==========================================
+const etagCache = new Map()
+const dataCache = new Map()
+
+const getCacheKey = (config) => {
+  const params = config.params ? JSON.stringify(config.params) : ''
+  return `${config.url}${params}`
+}
+
+export function clearApiCache(urlPattern) {
+  for (const key of etagCache.keys()) {
+    if (key.includes(urlPattern)) etagCache.delete(key)
+  }
+  for (const key of dataCache.keys()) {
+    if (key.includes(urlPattern)) dataCache.delete(key)
+  }
+}
+
+// ==========================================
+// 2. Request Interceptor (التوكن + ETag)
+// ==========================================
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+
+  const isAuthEndpoint =
+    config.url?.includes('/users/token/') ||
+    config.url?.includes('/users/register/')
+
+  // إضافة التوكن
+  if (token && !isAuthEndpoint) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+
+  // إضافة ETag إذا كنا نطلب بيانات GET ولدينا نسخة محفوظة
+  if (config.method === 'get') {
+    const cacheKey = getCacheKey(config)
+    const etag = etagCache.get(cacheKey)
+
+    // نرسل الـ ETag فقط إذا كنا نمتلك البيانات فعلاً في الكاش
+    if (etag && dataCache.has(cacheKey)) {
+      config.headers['If-None-Match'] = etag
+    }
+  }
+
   return config
 })
 
+// ==========================================
+// 3. Response Interceptor (304 / 401)
+// ==========================================
 let isRefreshing = false
 let failedQueue = []
 
@@ -31,9 +77,41 @@ const processQueue = (error, token = null) => {
 }
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    if (res.config.method === 'get') {
+      console.log('--- Response Interceptor ---')
+      console.log('URL:', res.config.url)
+      console.log('ETag Header:', res.headers['etag'])
+
+      if (res.headers['etag']) {
+        const cacheKey = getCacheKey(res.config)
+        etagCache.set(cacheKey, res.headers['etag'])
+        dataCache.set(cacheKey, res.data)
+        console.log('✅ Cached successfully with key:', cacheKey)
+      } else {
+        console.log('❌ No ETag found in response headers')
+      }
+    }
+    return res
+  },
   async (err) => {
     const original = err.config
+
+    if (err.response?.status === 304) {
+      const cacheKey = getCacheKey(original)
+      const cachedData = dataCache.get(cacheKey)
+
+      if (cachedData) {
+        return Promise.resolve({
+          data: cachedData,
+          status: 200,
+          statusText: 'OK (Cached)',
+          headers: err.response.headers,
+          config: original,
+        })
+      }
+      return Promise.reject(err)
+    }
 
     if (err.response?.status !== 401 || original._retry) {
       return Promise.reject(err)
@@ -84,6 +162,9 @@ api.interceptors.response.use(
     }
   }
 )
+if (import.meta.env.DEV) {
+  window.debugCache = { etagCache, dataCache, clearApiCache }
+}
 
 export default api
 export { refreshApi, BASE_URL }

@@ -15,6 +15,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
+from corsheaders.defaults import default_headers
 
 from corsheaders.defaults import default_headers
 
@@ -43,6 +44,12 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ['ETag']
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'if-none-match',
+    'if-match',
+]
 
 CORS_EXPOSE_HEADERS = ['ETag']
 
@@ -152,8 +159,8 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             # Recommended for production: connection pooling and timeouts
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
+            "SOCKET_CONNECT_TIMEOUT": 50,
+            "SOCKET_TIMEOUT": 50,
             "CONNECTION_POOL_KWARGS": {"max_connections": 100, "retry_on_timeout": True},
         },
         "KEY_PREFIX": "drf", # Optional: avoids key collisions
@@ -196,6 +203,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Email
@@ -338,7 +347,13 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("CHANNEL_REDIS_URL")], # Use DB 2 for channels
+            "hosts": [
+                {
+                    "address": os.environ.get("CHANNEL_REDIS_URL"),
+                    "socket_timeout": 20,   # must be > channels_redis's 5s brpop_timeout
+                }
+            ],
+
         },
     },
 }

@@ -11,6 +11,7 @@ export const registerUser = async ({ username, email, password }) => {
   formData.append('email', email)
   formData.append('password', password)
 
+  // تم إضافة /v1/ هنا بناءً على الـ Swagger
   const { data } = await api.post('/users/register/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })

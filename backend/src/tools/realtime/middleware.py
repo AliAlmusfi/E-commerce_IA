@@ -13,7 +13,7 @@ def get_user(token):
         user_id = access_token['user_id']
         return get_user_model().objects.get(id=user_id)
     except Exception:
-        raise AnonymousUser()
+        return  AnonymousUser()
 
 
 class JWTAuthMiddleware:
