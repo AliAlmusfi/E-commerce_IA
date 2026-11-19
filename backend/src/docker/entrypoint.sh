@@ -11,7 +11,7 @@ echo "Database is up."
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
-exec gunicorn e_commerce.wsgi:application \
-     --bind 0.0.0.0:8000 \
-     --workers 3 \
-     --timeout 120
+exec uvicorn e_commerce.asgi:application \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 3

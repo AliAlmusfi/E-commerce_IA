@@ -46,11 +46,13 @@ AUTH_USER_MODEL = 'user.User'
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'channels',
     'django.contrib.staticfiles',
 
     'rest_framework',
@@ -318,13 +320,13 @@ LOGGING = {
 
 #Realtime
 
-ASGI_APPLICATION = 'E_commerce.asgi.application'
+ASGI_APPLICATION = 'e_commerce.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("REDIS_URL")], # Use DB 2 for channels
+            "hosts": [os.environ.get("CHANNEL_REDIS_URL")], # Use DB 2 for channels
         },
     },
 }
