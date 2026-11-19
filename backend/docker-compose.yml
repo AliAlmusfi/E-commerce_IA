@@ -113,7 +113,8 @@ services:
       - FLASK_GRPC_PORT=50051
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
-    command: gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+    command: uvicorn e_commerce.asgi:application --host 0.0.0.0 --port 8000 --workers 3 
+    # gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     volumes:
       # CHANGE: Update your path to include backend/
       - ./src:/app

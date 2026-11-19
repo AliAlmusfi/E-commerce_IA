@@ -1,5 +1,5 @@
 from django.urls import re_path
-import consumers
+from . import consumers
 
 websocket_urlpatterns = [
     re_path(r'ws/order/(?P<order_id>[1-9]\d*)/$', consumers.OrderStatusConsumer.as_asgi()),
