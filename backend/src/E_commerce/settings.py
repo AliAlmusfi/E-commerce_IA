@@ -159,8 +159,8 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             # Recommended for production: connection pooling and timeouts
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
+            "SOCKET_CONNECT_TIMEOUT": 50,
+            "SOCKET_TIMEOUT": 50,
             "CONNECTION_POOL_KWARGS": {"max_connections": 100, "retry_on_timeout": True},
         },
         "KEY_PREFIX": "drf", # Optional: avoids key collisions
@@ -347,7 +347,13 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("CHANNEL_REDIS_URL")], # Use DB 2 for channels
+            "hosts": [
+                {
+                    "address": os.environ.get("CHANNEL_REDIS_URL"),
+                    "socket_timeout": 20,   # must be > channels_redis's 5s brpop_timeout
+                }
+            ],
+
         },
     },
 }
