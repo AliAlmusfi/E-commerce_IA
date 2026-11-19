@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 from datetime import timedelta
 from corsheaders.defaults import default_headers
 
+from corsheaders.defaults import default_headers
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -48,16 +51,28 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'if-match',
 ]
 
+CORS_EXPOSE_HEADERS = ['ETag']
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'if-none-match',
+    'if-match',
+]
+
+
+
+
 AUTH_USER_MODEL = 'user.User'
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'channels',
     'django.contrib.staticfiles',
 
     'rest_framework',
@@ -77,10 +92,9 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'tools.middleware.ETagCacheHeadersMiddleware', # own
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # own
-    'tools.db.middleware.ReadYourWritesMiddleware',
-    # end own
+    'tools.db.middleware.ReadYourWritesMiddleware', # own
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -327,13 +341,13 @@ LOGGING = {
 
 #Realtime
 
-ASGI_APPLICATION = 'E_commerce.asgi.application'
+ASGI_APPLICATION = 'e_commerce.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("REDIS_URL")], # Use DB 2 for channels
+            "hosts": [os.environ.get("CHANNEL_REDIS_URL")], # Use DB 2 for channels
         },
     },
 }

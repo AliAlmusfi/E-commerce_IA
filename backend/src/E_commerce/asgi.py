@@ -11,14 +11,16 @@ import os
 
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter , URLRouter
-from tools.realtime.middleware import JWTAuthMiddleware  
-from order import routing
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'e_commerce.settings')
 
-# application = get_asgi_application()
+django_asgi_app  = get_asgi_application()
+
+from tools.realtime.middleware import JWTAuthMiddleware  
+from tools.realtime import routing
 
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
+    "http": django_asgi_app,
     "websocket": JWTAuthMiddleware(
         URLRouter(
             routing.websocket_urlpatterns
