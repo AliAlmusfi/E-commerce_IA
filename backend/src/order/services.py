@@ -11,6 +11,7 @@ from user.public import get_users_map
 from tools.db.db_router import WRITE_DB
 from tools.etag_tools import get_etag
 from tools.caching import explicit_invalidate_cache
+from .tasks import send_order_email
 
 
 
@@ -37,12 +38,13 @@ def initiate_order_processing(user_id: int, user_email: str, items_data: list[di
     return order
 
 
-def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> Order:
+def process_order_logic(user_id:int , user_email: str, items_data: list[dict]) -> Order:
 
     client = InventoryClient()
     products = {}
     try:
-            
+
+        
         for item in items_data:
             pid = item['product_id']
             stock = client.get_product_stock(pid, user_id)
@@ -76,6 +78,10 @@ def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> 
     try:
         explicit_invalidate_cache('order', id)
         with transaction.atomic():
+            order = Order.objects.db_manager(WRITE_DB).create(
+                user_id=user_id, 
+                status=Order.Status.PENDING
+            )
             total = Decimal("0.00")
             for item in items_data:
                 pid = item["product_id"]
@@ -93,10 +99,31 @@ def process_order_logic(order: Order, items_data: list[dict] , user_id: int) -> 
 
             order.total = total
             order.save(update_fields=["total"], using=WRITE_DB) 
+
+            # transaction.on_commit(
+            #     lambda: process_order_async.delay(
+            #         created_at=order.created_at,
+            #         # items_data=items_data,
+            #         # user_id=user_id,
+            #         user_email=user_email
+            #     )
+            # )
+            # send_order_email.delay(user_email=user_email, order_ref=str(order.id), event='confirmed')
+
+            transaction.on_commit(
+                lambda: send_order_email.delay(
+                    user_email=user_email,
+                    order_ref=str(order.id),
+                    event='confirmed',
+                )
+            )
             
     except Exception:
+
         _release_reserved(client, items_data, user_id)
         raise   
+
+    return order  
 
 
 # def _raise_reservation_failure(client, items_data, products , user):
