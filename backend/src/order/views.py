@@ -9,10 +9,11 @@ from rest_framework.permissions import IsAuthenticated, AllowAny , IsAdminUser
 from rest_framework.throttling import UserRateThrottle , ScopedRateThrottle 
 from rest_framework_condition import etag
 
-from .services import  update_order_status , initiate_order_processing, get_order_etag
+from .services import  update_order_status , initiate_order_processing, get_order_etag , process_order_logic
 from django.core.exceptions import ValidationError , PermissionDenied
 
 from user.public import get_users_map
+
 
 
 
@@ -24,8 +25,12 @@ from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerial
 
 from tools.grpc.client import InventoryServiceError
 from tools.caching import do_cache, get_cache_key, get_cached_response
+from tools.error_handler.exceptions import BusinessRuleViolation
+from tools.db.db_router import WRITE_DB
 
 from product.public import get_products_map
+
+from .tasks import send_order_email
 
 
 MODULE = "order"
@@ -141,34 +146,43 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        order = initiate_order_processing(
-            user_id=request.user.id,
-            user_email=request.user.email,
-            items_data=serializer.validated_data["items"]
-        )
-        return Response(
-            {
-                "order_id": order.id,
-                "status": "processing",
-                "message": "We are processing your order. Please check your email for confirmation."
-            },
-            status=status.HTTP_202_ACCEPTED
-        )
-        # try:
-        order = create_order(user = request.user , items_data=serializer.validated_data["items"])
-        # except InventoryServiceError as exc:
-        #     return Response(
-        #         {
-        #             "detail": "Inventory service unavailable. Try again shortly.",
-        #             "error":  str(exc),
-        #         },
-        #         status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        #     )
-        # except ValidationError as exc:
-            
-        #     return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            order = process_order_logic(user_id = request.user.id ,user_email=request.user.email , items_data=serializer.validated_data["items"])
 
-        out = OrderSerializer(order, context=self.get_serializer_context())
+        except BusinessRuleViolation as exc:
+            send_order_email.delay(
+                user_email=request.user.email,
+                order_ref='—',
+                event='failed',
+                error_message=str(exc),
+            )
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except InventoryServiceError as exc:
+            send_order_email.delay(
+                user_email=request.user.email,
+                order_ref='—',
+                event='failed',
+                error_message="Inventory service unavailable. Please try again.",
+            )
+            return Response(
+                {"detail": "Inventory service unavailable. Try again shortly."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        order = (
+            Order.objects.using(WRITE_DB)
+            .prefetch_related(
+                Prefetch('items', queryset=OrderItem.objects.using(WRITE_DB))
+            )
+            .get(id=order.id)
+        )
+        out = OrderSerializer(order, context={
+            **self.get_serializer_context(),
+            'user_map': {request.user.id: request.user},
+        })
+        print("//////////////////////////////////////////////////////////////////////")
+        print(out.data)
+        print("//////////////////////////////////////////////////////////////////////")
         return Response(out.data, status=status.HTTP_201_CREATED)
 
     # ─── update / partial_update — DISABLED ────────────────────
