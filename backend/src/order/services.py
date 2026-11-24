@@ -113,7 +113,7 @@ def process_order_logic(user_id:int , user_email: str, items_data: list[dict]) -
             transaction.on_commit(
                 lambda: send_order_email.delay(
                     user_email=user_email,
-                    order_ref=str(order.id),
+                    order_ref=str(order.created_at),
                     event='confirmed',
                 )
             )

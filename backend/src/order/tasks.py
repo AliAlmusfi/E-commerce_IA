@@ -17,7 +17,7 @@ def send_order_email(self, user_email: str, order_ref: str, event: str, error_me
             body    = f'Your order #{order_ref} has been placed and is pending approval.'
         elif event == 'failed':
             subject = 'Order Failed'
-            body    = f'Sorry, your order #{order_ref} failed. Reason: {error_message}'
+            body    = f'Sorry, your order failed. Reason: {error_message}'
         else:
             raise ValueError(f"Unknown event type: {event!r}")
         print("//////////////////////////////////////////////////////////////////////")
