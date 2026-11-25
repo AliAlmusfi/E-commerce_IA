@@ -20,7 +20,6 @@ from tools.realtime.middleware import JWTAuthMiddleware
 from tools.realtime import routing
 
 application = ProtocolTypeRouter({
-    "http": django_asgi_app,
     "websocket": JWTAuthMiddleware(
         URLRouter(
             routing.websocket_urlpatterns

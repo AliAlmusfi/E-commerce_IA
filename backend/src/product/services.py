@@ -1,6 +1,6 @@
 from .models import Product
 
-from tools.grpc.client import InventoryClient #, InventoryServiceError
+from tools.grpc.client import InventoryClient
 from tools.error_handler.exceptions import BusinessRuleViolation , InventoryServiceError
 from tools.db.db_router import WRITE_DB
 from tools.etag_tools import get_etag
@@ -19,15 +19,21 @@ def create_product(user_id, data:dict)->Product:
 
     # create storage in Inventory service
     try:
+        print("\n\nIN TRY\n")
         client = InventoryClient()
         response = client.create_product_storage(
             user_id=user_id,
             product_id=product.id,
             stock=stock
         )
-    except InventoryServiceError:
+        print("END OF TRY\n") 
+    except InventoryServiceError as e:
+        print("IN EXCEPT\n")
+        print(f"EXCEPT EXCEPTION<{e.__class__}> ({str(e)})\n")
         delete_product(product)
+        print("AFTER DELETE\n\n")
         raise
+        
 
     if not response['product_id']:
         delete_product(product)

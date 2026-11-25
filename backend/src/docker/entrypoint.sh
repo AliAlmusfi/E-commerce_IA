@@ -8,10 +8,16 @@ until python -c "import socket,os; socket.create_connection((os.environ.get('DAT
 done
 echo "Database is up."
 
-python manage.py migrate --noinput
+if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
+  echo "Running migrations..."
+  python manage.py migrate --noinput
+fi
+
 python manage.py collectstatic --noinput
 
-exec uvicorn e_commerce.asgi:application \
-    --host 0.0.0.0 \
-    --port 8000 \
-    --workers 3
+# Run the command from Compose (CMD) if provided; otherwise fall back
+if [ "$#" -gt 0 ]; then
+  exec "$@"
+else
+  exec uvicorn e_commerce.asgi:application --host 0.0.0.0 --port 8000 --workers 3
+fi

@@ -2,7 +2,6 @@
 import grpc
 import uuid
 from typing import Optional, Iterable
-from django.conf import settings
 
 from tools.caching import explicit_invalidate_cache
 
@@ -17,20 +16,12 @@ from .inventory_pb2 import (
 )
 from .inventory_pb2_grpc import InventoryServiceStub
 
+from ..error_handler.exceptions import (
+    InventoryClientError,
+    InventoryServerError,
+    InventoryUnavailableError
+)
 
-class InventoryServiceError(Exception):
-    """Raised when the inventory service is unreachable or returns an error."""
-    def __init__(self, message: str, code: grpc.StatusCode | None = None, details: str = ""):
-        super().__init__(message)
-        self.code = code
-        self.details = details
-
-class InventoryUnavailableError(InventoryServiceError):
-    """Service unreachable / timed out — safe to retry or surface as 503."""
-class InventoryClientError(InventoryServiceError):
-    """Server rejected the request (NOT_FOUND, INVALID_ARGUMENT, …) — do not retry."""
-class InventoryServerError(InventoryServiceError):
-    """Server-side failure (INTERNAL, UNKNOWN) — likely a bug, do not retry."""
 
 # Codes that mean "try again later"
 _RETRYABLE = {
@@ -60,6 +51,7 @@ def _raise_for_rpc(e: grpc.RpcError, op: str) -> None:
 
 class InventoryClient:
     def __init__(self, host: Optional[str] = None, timeout: float = 3.0):
+        from django.conf import settings
         self.host    = host or settings.INVENTORY_GRPC_HOST
         self.timeout = timeout
 

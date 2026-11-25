@@ -4,12 +4,6 @@ from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 from rest_framework import status
-from ..grpc.client import (
-    # InventoryServiceError as GrpcInventoryServiceError, # Aliased to avoid name clash
-    InventoryUnavailableError,
-    InventoryClientError,
-    InventoryServerError
-)
 
 class AppBaseException(Exception):
     """Base exception for all business logic errors."""
@@ -21,9 +15,19 @@ class AppBaseException(Exception):
         super().__init__(message)
 
 # Specific exceptions for your modules
-class InventoryServiceError(AppBaseException):
-    def __init__(self, message="Inventory service unavailable."):
-        super().__init__(message, code="INVENTORY_UNAVAILABLE", status_code=503)
+class InventoryServiceError(Exception):
+    """Raised when the inventory service is unreachable or returns an error."""
+    def __init__(self, message: str, code: grpc.StatusCode | None = None, details: str = ""):
+        super().__init__(message)
+        self.code = code
+        self.details = details
+
+class InventoryUnavailableError(InventoryServiceError):
+    """Service unreachable / timed out — safe to retry or surface as 503."""
+class InventoryClientError(InventoryServiceError):
+    """Server rejected the request (NOT_FOUND, INVALID_ARGUMENT, …) — do not retry."""
+class InventoryServerError(InventoryServiceError):
+    """Server-side failure (INTERNAL, UNKNOWN) — likely a bug, do not retry."""
 
 class BusinessRuleViolation(AppBaseException):
     def __init__(self, message, details=None):
