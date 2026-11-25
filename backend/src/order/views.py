@@ -23,7 +23,7 @@ from rest_framework.pagination import PageNumberPagination
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerializer, OrderStatusUpdateSerializer
 
-from tools.grpc.client import InventoryServiceError
+from tools.error_handler.exceptions import InventoryServiceError
 from tools.caching import do_cache, get_cache_key, get_cached_response
 from tools.error_handler.exceptions import BusinessRuleViolation
 from tools.db.db_router import WRITE_DB

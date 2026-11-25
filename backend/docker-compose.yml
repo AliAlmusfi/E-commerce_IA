@@ -92,14 +92,38 @@ services:
       start_period: 30s
     # restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      CELERY_RESULT_BACKEND: rpc:// 
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+  
   django-app:
     # CHANGE: Use root as context, specify exact Dockerfile path
     build:
       context: .
       dockerfile: src/DockerFile
+    deploy: # scaling to 3 replicas
+      replicas: 3
     env_file:
       - ./src/.env
     environment:
+      - RUN_MIGRATIONS=0
       - DJANGO_DEBUG=0
       - DATABASE_HOST=django-db
       - DATABASE_NAME=django_db
@@ -113,14 +137,113 @@ services:
       - FLASK_GRPC_PORT=50051
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
-    command: uvicorn e_commerce.asgi:application --host 0.0.0.0 --port 8000 --workers 3 
-    # gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+    command: gunicorn e_commerce.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4 --timeout 120
+    # uvicorn e_commerce.asgi:application --host 0.0.0.0 --port 8000 --workers 3 
     volumes:
       # CHANGE: Update your path to include backend/
       - ./src:/app
       - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
+    depends_on:
+      django-db:
+        condition: service_healthy
+      django-replica-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  migrate:
+    build:
+      context: .
+      dockerfile: src/DockerFile
+    env_file:
+      - ./src/.env
+    environment:
+      - RUN_MIGRATIONS=1
+      - DJANGO_DEBUG=0
+      - DATABASE_HOST=django-db
+      - DATABASE_NAME=django_db
+      - DATABASE_USER=django_user
+      - DATABASE_PASSWORD=django_password
+      - REPLICA_DATABASE_HOST=django-replica-db
+      - REPLICA_DATABASE_NAME=django_db
+      - REPLICA_DATABASE_USER=django_user
+      - REPLICA_DATABASE_PASSWORD=django_password
+      - FLASK_GRPC_HOST=flask-app
+      - FLASK_GRPC_PORT=50051
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    depends_on:
+      django-db: 
+        condition: service_healthy
+      django-replica-db: 
+        condition: service_healthy
+    networks: 
+      - app-network
+    restart: "no"
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: src/DockerFile
+    env_file:
+      - ./src/.env
+    environment:
+      - RUN_MIGRATIONS=0
+      - DJANGO_DEBUG=0
+      - DATABASE_HOST=django-db
+      - DATABASE_NAME=django_db
+      - DATABASE_USER=django_user
+      - DATABASE_PASSWORD=django_password
+      - FLASK_GRPC_HOST=flask-app
+      - FLASK_GRPC_PORT=50051
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    command: ["celery", "-A", "e_commerce", "worker", "-l", "info", "--concurrency", "4"]
+    volumes:
+      - ./src:/app
+      - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      django-db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  websocket-app:
+    build:
+      context: .
+      dockerfile: src/DockerFile
+    env_file:
+      - ./src/.env
+    environment:
+      - RUN_MIGRATIONS=0
+      - DJANGO_DEBUG=0
+      - DATABASE_HOST=django-db
+      - DATABASE_NAME=django_db
+      - DATABASE_USER=django_user
+      - DATABASE_PASSWORD=django_password
+      - REPLICA_DATABASE_HOST=django-replica-db
+      - REPLICA_DATABASE_NAME=django_db
+      - REPLICA_DATABASE_USER=django_user
+      - REPLICA_DATABASE_PASSWORD=django_password
+      - FLASK_GRPC_HOST=flask-app
+      - FLASK_GRPC_PORT=50051
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    command: daphne -b 0.0.0.0 -p 8001 e_commerce.asgi:application
+    volumes:
+      - ./src:/app
+      - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
+    expose:
+      - "8001"
     depends_on:
       django-db:
         condition: service_healthy
@@ -155,55 +278,19 @@ services:
         condition: service_healthy
     networks:
       - app-network
-  
-  rabbitmq:
-    image: rabbitmq:3-management
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
-      CELERY_RESULT_BACKEND: rpc:// 
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 30s
 
-  celery-worker:
-    build:
-      context: .
-      dockerfile: src/DockerFile
-    env_file:
-      - ./src/.env
-    environment:
-      - DJANGO_DEBUG=0
-      - DATABASE_HOST=django-db
-      - DATABASE_NAME=django_db
-      - DATABASE_USER=django_user
-      - DATABASE_PASSWORD=django_password
-      - FLASK_GRPC_HOST=flask-app
-      - FLASK_GRPC_PORT=50051
-      - REDIS_URL=redis://redis:6379/1
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
-    entrypoint: ["celery", "-A", "e_commerce", "worker", "-l", "info"]
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
     volumes:
-      - ./src:/app
-      - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      rabbitmq:
-        condition: service_healthy
-      django-db:
-        condition: service_healthy
+      - django-app
+      - websocket-app
     networks:
       - app-network
+
 
 
 volumes:

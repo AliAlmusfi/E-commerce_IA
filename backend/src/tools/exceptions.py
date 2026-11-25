@@ -3,10 +3,10 @@ import grpc
 from rest_framework import status 
 from rest_framework.response import Response
 
-from .grpc.client import (InventoryServiceError,
-                          InventoryUnavailableError,
-                          InventoryClientError,
-                          InventoryServerError)
+from .error_handler.exceptions import (InventoryServiceError,
+                                    InventoryUnavailableError,
+                                    InventoryClientError,
+                                    InventoryServerError)
 
 def exception_response(e:Exception):
     return Response(

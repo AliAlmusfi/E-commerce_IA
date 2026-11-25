@@ -5,7 +5,6 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import Order, OrderItem
-# from backend.src.tools.grpc.client import InventoryClient, InventoryServiceError
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

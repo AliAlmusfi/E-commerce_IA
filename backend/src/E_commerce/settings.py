@@ -122,7 +122,7 @@ WSGI_APPLICATION = 'e_commerce.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-load_dotenv(BASE_DIR / '.env') 
+load_dotenv(BASE_DIR / '.env')
 
 DATABASES = {
     'default': {
@@ -135,6 +135,8 @@ DATABASES = {
         "OPTIONS": {
             "init_command": "SET default_storage_engine=INNODB",
         },
+        "CONN_MAX_AGE": 60,  # Keep connection open for 60 seconds
+        "CONN_HEALTH_CHECKS": True,  # Verify connection before reuse
     },
     "replica": {
         'ENGINE': os.getenv('REPLICA_DATABASE_ENGINE' , 'django.db.backends.mysql'), 
@@ -147,6 +149,8 @@ DATABASES = {
         "TEST": {
             "MIRROR": "default",
         },
+        "CONN_MAX_AGE": 60,  # Keep connection open for 60 seconds
+        "CONN_HEALTH_CHECKS": True,  # Verify connection before reuse
     },
 }
 DATABASE_ROUTERS = ["tools.db.db_router.PrimaryReplicaRouter"]
@@ -286,7 +290,7 @@ FIREBASE_POST_REQUEST_URL = os.getenv('FIREBASE_POST_REQUEST_URL')
 # ]
 
 PRODUCT_SERVICE_GRPC_HOST = os.getenv('PRODUCT_SERVICE_GRPC_HOST' , '')
-INVENTORY_GRPC_HOST = os.getenv('INVENTORY_GRPC_HOST' , '')
+INVENTORY_GRPC_HOST = os.getenv('INVENTORY_GRPC_HOST' , 'host.docker.internal:50051')
 
 
 # REST_FRAMEWORK = {
@@ -312,11 +316,21 @@ CELERY_TASK_REJECT_ON_WORKER_LOST = True # If worker crashes, requeue the messag
 CELERY_TASK_QUEUES = {
     'default': {
         'exchange': 'default',
+        'exchange_type': 'direct',
         'routing_key': 'default',
         # If it fails, send to DLQ
-        'queue_arguments': {'x-dead-letter-exchange': 'dlx_exchange'}
-    }
+        'queue_arguments': {
+            'x-dead-letter-exchange': 'dlx_exchange',
+            'x-dead-letter-routing-key': 'dlq_key',
+        }
+    },
+    'dead_letter_queue': {
+        'exchange': 'dlx_exchange',
+        'exchange_type': 'direct',
+        'routing_key': 'dlq_key',
+    },
 }
+
 CELERY_TASK_DEFAULT_QUEUE = 'default'
 
 
