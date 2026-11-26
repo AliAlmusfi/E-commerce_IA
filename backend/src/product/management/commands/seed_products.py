@@ -6,6 +6,7 @@ from faker import Faker
 from ...models import Product
 
 from ...services import create_product
+from user.models import User
 
 fake = Faker()
 
@@ -33,10 +34,12 @@ class Command(BaseCommand):
             deleted, _ = Product.objects.all().delete()
             self.stdout.write(self.style.WARNING(f"Deleted {deleted} existing products"))
 
+        user = User.objects.filter(is_staff=1 , is_superuser = 1).first()
+
 
         for _ in range(count):
             product_data  = {
-                "title" : fake.word()[:20].title(),
+                "title" : fake.word()[:20].title()+ f"{str(_)}",
                 "manufacturer": fake.company()[:20],
                 "price": Decimal(random.randint(100 , 500000)) / 100,
                 "description": fake.sentence(nb_words=10)[:100],
@@ -50,12 +53,13 @@ class Command(BaseCommand):
             #     stock=random.randint(0, 500),
             # )
             # products.append(product)
-            create_product(1,product_data)
+            # create_product(user.id,product_data)
 
             try:
-                create_product(1, product_data)
+                create_product(user.id, product_data)
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to create product: {str(e)}"))
+                raise
 
 
         # Product.objects.bulk_create(products)

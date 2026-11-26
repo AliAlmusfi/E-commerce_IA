@@ -323,7 +323,7 @@ CELERY_TASK_QUEUES = {
             'x-dead-letter-exchange': 'dlx_exchange',
             'x-dead-letter-routing-key': 'dlq_key',
         }
-    },
+    },   
     'dead_letter_queue': {
         'exchange': 'dlx_exchange',
         'exchange_type': 'direct',
