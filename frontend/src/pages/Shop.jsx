@@ -109,7 +109,7 @@ export default function Shop() {
                                   <div className="box_main">
                                     <h6 className="number_text">{String(index + 1).padStart(2, '0')}</h6>
                                     <div className="image_2">
-                                      <img src={imageSrc} alt={product.title} style={{ objectFit: 'cover', maxHeight: '400px', width: '100%' }} />
+                                      <img src={imageSrc} alt={product.title} style={{ objectFit: 'cover', maxHeight: '400px', width: '100%'  , overflow: 'visible'}} />
                                     </div>
                                   </div>
                                 </div>
