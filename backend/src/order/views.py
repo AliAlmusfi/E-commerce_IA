@@ -181,7 +181,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             'user_map': {request.user.id: request.user},
         })
         print("//////////////////////////////////////////////////////////////////////")
-        print(out.data)
+        print(out.data.get("id"))
         print("//////////////////////////////////////////////////////////////////////")
         return Response(out.data, status=status.HTTP_201_CREATED)
 
